@@ -4,7 +4,7 @@ O_FILES := hostser.o crc16.o sric.o gw.o
 all: libsric.a
 
 libsric.a: ${O_FILES}
-	msp430-ar r $@ $<
+	msp430-ar r $@ $^
 
 include depend
 
