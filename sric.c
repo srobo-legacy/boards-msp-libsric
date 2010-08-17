@@ -16,7 +16,6 @@
 #include "sric.h"
 #include <io.h>
 #include "crc16.h"
-#include "config.h"
 
 uint8_t sric_txbuf[SRIC_TXBUF_SIZE];
 uint8_t sric_txlen;
