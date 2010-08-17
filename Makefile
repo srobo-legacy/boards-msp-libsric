@@ -1,5 +1,5 @@
 
-O_FILES := hostser.o crc16.o sric.o
+O_FILES := hostser.o crc16.o sric.o gw.o
 
 all: ${O_FILES}
 
