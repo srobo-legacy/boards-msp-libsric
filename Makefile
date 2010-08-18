@@ -17,4 +17,4 @@ depend: *.c
 PHONY: clean
 
 clean:
-	-rm *.o
+	-rm *.o *.a
