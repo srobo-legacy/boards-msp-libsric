@@ -39,7 +39,7 @@ typedef enum {
 
 static state_t gw_state = S_IDLE;
 
-void gw_init( void )
+void sric_gw_init( void )
 {
 }
 
@@ -94,17 +94,17 @@ static void gw_fsm( gw_event_t event )
 	}
 }
 
-void gw_hostser_rx( void )
+void sric_gw_hostser_rx( void )
 {
 	gw_fsm( EV_HOST_RX );
 }
 
-void gw_hostser_tx_done( void )
+void sric_gw_hostser_tx_done( void )
 {
 	gw_fsm( EV_HOST_TX_COMPLETE );
 }
 
-void gw_sric_rx( void )
+void sric_gw_sric_rx( void )
 {
 	gw_fsm( EV_SRIC_RX );
 }
