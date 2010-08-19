@@ -1,5 +1,5 @@
 
-O_FILES := hostser.o crc16.o sric.o sric-gw.o
+O_FILES := hostser.o crc16.o sric.o sric-gw.o sric-client.o
 
 all: libsric.a
 
