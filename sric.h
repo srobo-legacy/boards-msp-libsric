@@ -2,6 +2,7 @@
 #define __SRIC_H
 #include <stdbool.h>
 #include <stdint.h>
+#include "sric-if.h"
 
 #define MAX_PAYLOAD 64
 
@@ -44,11 +45,18 @@ typedef struct {
 
 	/* n to pass to the usart functions */
 	uint8_t usart_n;
+
+	/*** Callbacks ***/
+	/* Received a frame */
+	uint8_t (*rx) ( const sric_if_t *iface );
 } sric_conf_t;
 
 /* Our SRIC address */
 /* 0 means we haven't had one assigned yet */
 extern uint8_t sric_addr;
+
+/* Description of this interface */
+extern const sric_if_t sric_if;
 
 /* Initialise the internal goo */
 void sric_init( void );
@@ -57,14 +65,5 @@ void sric_init( void );
 bool sric_tx_cb( uint8_t *b );
 /* Callback for each byte received */
 void sric_rx_cb( uint8_t b );
-
-/* Begin transmission of the frame in the tx buffer */
-void sric_tx( void );
-
-/* Transmit a response frame */
-void sric_tx_resp( void );
-
-/* Indicate that the received frame has been processed */
-void sric_rx_done( void );
 
 #endif	/* __SRIC_H */

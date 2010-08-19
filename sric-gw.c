@@ -57,7 +57,8 @@ static void gw_fsm( gw_event_t event )
 			     i++ )
 				sric_txbuf[i] = hostser_rxbuf[i];
 
-			sric_tx();
+			/* TODO: We need to lock the transmit buffer */
+			sric_if.tx_cmd_start(hostser_rxbuf[SRIC_LEN] + SRIC_HEADER_SIZE);
 			gw_state = S_SRIC_TX_CMD;
 		}
 		else if( event == EV_SRIC_RX ) {
@@ -85,7 +86,7 @@ static void gw_fsm( gw_event_t event )
 		if( event == EV_HOST_TX_COMPLETE ) {
 			/* We're done with everything */
 			hostser_rx_done();
-			sric_rx_done();
+			sric_if.rx_unlock();
 			gw_state = S_IDLE;
 		}
 

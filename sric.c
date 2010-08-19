@@ -57,6 +57,16 @@ static volatile enum {
 	S_TX_RESP,
 } state;
 
+static void sric_tx_lock( void );
+static void sric_tx_start( void );
+
+const sric_if_t sric_if = {
+	.txbuf = sric_txbuf,
+	.rxbuf = sric_rxbuf,
+	.tx_lock = sric_tx_lock,
+	.tx_cmd_start = sric_tx_start,
+};
+
 static void fsm( event_t ev );
 
 #define SRIC_TXEN (1<<0)
@@ -75,6 +85,16 @@ void sric_init( void )
 	P3DIR |= SRIC_TXEN;
 }
 
+/* Set the CRC in the transmit buffer */
+static void crc_txbuf( void )
+{
+	uint8_t len = sric_txbuf[ SRIC_LEN ];
+	uint16_t c = crc16( sric_txbuf, SRIC_HEADER_SIZE + len );
+
+	sric_txbuf[ SRIC_DATA + len ] = c & 0xff;
+	sric_txbuf[ SRIC_DATA + len + 1 ] = (c >> 8) & 0xff;
+}
+
 static void fsm( event_t ev )
 {
 	switch(state) {
@@ -86,7 +106,8 @@ static void fsm( event_t ev )
 			state = S_TX_LOCKED;
 		} else if(ev == EV_RX) {
 			/* Received a frame */
-			/* TODO */
+			sric_txlen = sric_conf.rx(&sric_if);
+			crc_txbuf();
 
 			/* Start transmitting response */
 			lvds_tx_en();
@@ -126,7 +147,7 @@ static void fsm( event_t ev )
 		if(ev == EV_RX) {
 			/* TODO: Call callback */
 			state = S_IDLE;
-		}
+		} /* TODO: Repeat transmission if token comes back around */
 		break;
 
 	case S_TX_RESP:
@@ -220,17 +241,13 @@ void sric_rx_cb( uint8_t b )
 	nop();
 }
 
-void sric_tx( void )
+static void sric_tx_lock( void )
 {
-
+	while( state != S_TX_LOCKED )
+		fsm(EV_TX_LOCK);
 }
 
-void sric_tx_resp( void )
+static void sric_tx_start( void )
 {
-
-}
-
-void sric_rx_done( void )
-{
-
+	fsm(EV_TX_START);
 }
