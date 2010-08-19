@@ -57,7 +57,7 @@ static void gw_fsm( gw_event_t event )
 			     i++ )
 				sric_txbuf[i] = hostser_rxbuf[i];
 
-			/* TODO: We need to lock the transmit buffer */
+			sric_if.tx_lock();
 			sric_if.tx_cmd_start(hostser_rxbuf[SRIC_LEN] + SRIC_HEADER_SIZE);
 			gw_state = S_SRIC_TX_CMD;
 		}
