@@ -17,7 +17,8 @@
 #include <io.h>
 #include "crc16.h"
 
-uint8_t sric_txbuf[SRIC_TXBUF_SIZE];
+/* One additional byte for the 0x7e for correct stop bit receivage */
+uint8_t sric_txbuf[SRIC_TXBUF_SIZE+1];
 uint8_t sric_txlen;
 
 static struct {
@@ -58,7 +59,7 @@ static volatile enum {
 } state;
 
 static void sric_tx_lock( void );
-static void sric_tx_start( void );
+static void sric_tx_start( uint8_t len );
 
 const sric_if_t sric_if = {
 	.txbuf = sric_txbuf,
@@ -121,6 +122,15 @@ static void fsm( event_t ev )
 	case S_TX_LOCKED:
 		/* Transmit buffer's locked */
 		if(ev == EV_TX_START) {
+			/* Generate the checksum */
+			crc_txbuf();
+			sric_txlen += 2;
+
+			/* Add an additional 0x7e on the end of the frame
+			 to allow stop bits to be received correctly */
+			sric_txbuf[ sric_txlen ] = 0x7e;
+			sric_txlen++;
+
 			/* Ready to start transmitting */
 			lvds_tx_en();
 
@@ -247,7 +257,8 @@ static void sric_tx_lock( void )
 		fsm(EV_TX_LOCK);
 }
 
-static void sric_tx_start( void )
+static void sric_tx_start( uint8_t len )
 {
+	sric_txlen = len;
 	fsm(EV_TX_START);
 }
