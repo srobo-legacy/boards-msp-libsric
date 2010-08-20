@@ -48,6 +48,8 @@ typedef enum {
 static volatile enum {
 	/* Not much going on */
 	S_IDLE,
+	/* Waiting for our response to be assembled */
+	S_WAIT_ASM_RESP,
 	/* Transmit buffer's locked and being filled */
 	S_TX_LOCKED,
 	/* Transmitting */
@@ -107,16 +109,28 @@ static void fsm( event_t ev )
 			state = S_TX_LOCKED;
 		} else if(ev == EV_RX) {
 			/* Received a frame */
-			sric_txlen = sric_conf.rx(&sric_if);
-			crc_txbuf();
+			uint8_t l = sric_conf.rx_cmd(&sric_if);
 
-			/* Start transmitting response */
-			lvds_tx_en();
-			tx.out_pos = 0;
-			sric_conf.usart_tx_start(sric_conf.usart_n);
+			if( l == SRIC_RESPONSE_DEFER ) {
+				/* Response isn't ready yet.  Wait. */
+				state = S_WAIT_ASM_RESP;
+			} else {
+				sric_txlen = l;
+				crc_txbuf();
 
-			state = S_TX_RESP;
+				/* Start transmitting response */
+				lvds_tx_en();
+				tx.out_pos = 0;
+				sric_conf.usart_tx_start(sric_conf.usart_n);
+
+				state = S_TX_RESP;
+			}
 		}
+		break;
+
+	case S_WAIT_ASM_RESP:
+		/* TODO! */
+		while(1);
 		break;
 
 	case S_TX_LOCKED:

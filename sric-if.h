@@ -20,10 +20,10 @@ typedef struct {
 	   (the interface will manage checksumming) */
 	void (*tx_cmd_start) ( uint8_t len );
 
-	/* Function to be called when the data that's sat in the receive buffer is
-	   done with. */
-	void (*rx_unlock) ( void );
-
+	/* Start transmitting a response frame
+	   Must only be called when the rx_cmd callback has returned
+	   SRIC_RESPONSE_DEFER. */
+	void (*tx_response) ( uint8_t len );
 } sric_if_t;
 
 #endif	/* __SRIC_IF_H */

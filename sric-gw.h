@@ -13,7 +13,10 @@ void sric_gw_hostser_rx( void );
 /* Called when host-side transmission has completed */
 void sric_gw_hostser_tx_done( void );
 
-/* Call when frame available on the SRIC side */
-uint8_t sric_gw_sric_rx( const sric_if_t *iface );
+/* Called with incoming sric command frames */
+uint8_t sric_gw_sric_rxcmd( const sric_if_t *iface );
+
+/* Called with incoming sric response frames */
+void sric_gw_sric_rxresp( const sric_if_t *iface );
 
 #endif	/* __GW_H */

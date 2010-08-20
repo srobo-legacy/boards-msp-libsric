@@ -37,7 +37,6 @@ uint8_t sric_client_rx( const sric_if_t *iface )
 
 		if( sric_cmd_num < cmd ) {
 			uint8_t len = sric_commands[cmd].cmd( iface );
-			iface->rx_unlock();
 
 			return len;
 		}

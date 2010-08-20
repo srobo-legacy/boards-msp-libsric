@@ -34,6 +34,10 @@ enum {
 #define sric_addr_is_ack(x) ( x & 0x80 )
 #define sric_frame_is_ack(buf) ( sric_addr_is_ack(buf[SRIC_DEST]) )
 
+/* Value for command rx callback to return when 
+   the response will be provided to the interface later */
+#define SRIC_RESPONSE_DEFER 255
+
 /* SRIC configuration
    There must be a const instance of this called sric_conf somewhere. */
 typedef struct {
@@ -47,8 +51,22 @@ typedef struct {
 	uint8_t usart_n;
 
 	/*** Callbacks ***/
-	/* Received a frame */
-	uint8_t (*rx) ( const sric_if_t *iface );
+	/* Received a command frame.
+	   This callback can be used in two ways:
+	   1) It can assemble the response frame in the transmit buffer
+	      and return the number of bytes it put there (from the start 
+	      of the buffer to the last data byte).  The interface will
+	      then begin transmission of that response immediately.
+
+	   2) It can return SRIC_RESPONSE_DEFER, in which case the interface
+	      will wait for the response frame to be provided with a call to 
+	      tx_response (which takes the number of bytes etc.). */
+	uint8_t (*rx_cmd) ( const sric_if_t *iface );
+
+	/* Received a response frame
+	   Only called if not NULL. */
+	void (*rx_resp) ( const sric_if_t *iface );
+
 } sric_conf_t;
 
 /* Our SRIC address */

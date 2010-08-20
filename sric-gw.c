@@ -86,7 +86,6 @@ static void gw_fsm( gw_event_t event )
 		if( event == EV_HOST_TX_COMPLETE ) {
 			/* We're done with everything */
 			hostser_rx_done();
-			sric_if.rx_unlock();
 			gw_state = S_IDLE;
 		}
 
@@ -105,9 +104,15 @@ void sric_gw_hostser_tx_done( void )
 	gw_fsm( EV_HOST_TX_COMPLETE );
 }
 
-uint8_t sric_gw_sric_rx( const sric_if_t *iface )
+uint8_t sric_gw_sric_rxcmd( const sric_if_t *iface )
 {
 	gw_fsm( EV_SRIC_RX );
-	return 0;
+
+	/* We'll provide our response later */
+	return SRIC_RESPONSE_DEFER;
 }
 
+void sric_gw_sric_rxresp( const sric_if_t *iface )
+{
+	gw_fsm( EV_SRIC_RX );
+}
