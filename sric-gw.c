@@ -105,8 +105,9 @@ void sric_gw_hostser_tx_done( void )
 	gw_fsm( EV_HOST_TX_COMPLETE );
 }
 
-void sric_gw_sric_rx( void )
+uint8_t sric_gw_sric_rx( const sric_if_t *iface )
 {
 	gw_fsm( EV_SRIC_RX );
+	return 0;
 }
 
