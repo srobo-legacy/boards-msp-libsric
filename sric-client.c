@@ -24,7 +24,7 @@ void sric_client_init( void )
 uint8_t sric_client_rx( const sric_if_t *iface )
 {
 	/* Check that the frame's for us */
-	if( sric_rxbuf[SRIC_SRC] != sric_addr )
+	if( sric_rxbuf[SRIC_DEST] != sric_addr )
 		/* TODO: Process broadcasts */
 		return;
 
