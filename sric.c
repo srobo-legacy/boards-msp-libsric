@@ -15,6 +15,7 @@
     Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA. */
 #include "sric.h"
 #include <io.h>
+#include <sys/cdefs.h>
 #include "crc16.h"
 
 /* One additional byte for the 0x7e for correct stop bit receivage */
@@ -168,7 +169,8 @@ static void fsm( event_t ev )
 	case S_WAIT_RESP:
 		/* Waiting for a response */
 		if(ev == EV_RX) {
-			/* TODO: Call callback */
+			if( sric_conf.rx_resp != NULL )
+				sric_conf.rx_resp( &sric_if );
 			state = S_IDLE;
 		} /* TODO: Repeat transmission if token comes back around */
 		break;
