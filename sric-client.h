@@ -2,6 +2,7 @@
 #define __SRIC_CLIENT_H
 #include <stdint.h>
 #include "sric-if.h"
+#include "sric.h"
 
 typedef struct {
 	/* Function to call when a command is received.
