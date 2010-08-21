@@ -114,8 +114,7 @@ static void fsm( event_t ev )
 			if( l == SRIC_RESPONSE_DEFER ) {
 				/* Response isn't ready yet.  Wait. */
 				state = S_WAIT_ASM_RESP;
-			} else {
-				sric_txlen = l;
+			} else if( l <= MAX_PAYLOAD ) {
 				crc_txbuf();
 
 				/* Start transmitting response */

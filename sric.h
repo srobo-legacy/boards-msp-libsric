@@ -34,9 +34,11 @@ enum {
 #define sric_addr_is_ack(x) ( x & 0x80 )
 #define sric_frame_is_ack(buf) ( sric_addr_is_ack(buf[SRIC_DEST]) )
 
-/* Value for command rx callback to return when 
-   the response will be provided to the interface later */
+/**** Special return values for the command rx callback to return: *****/
+/* The response will be provided to the interface later */
 #define SRIC_RESPONSE_DEFER 255
+/* Do not respond to this command */
+#define SRIC_IGNORE 254
 
 /* SRIC configuration
    There must be a const instance of this called sric_conf somewhere. */
