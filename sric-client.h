@@ -7,8 +7,8 @@
 typedef struct {
 	/* Function to call when a command is received.
 	   Find the received command in iface->rxbuf.
-	   Place the response in iface->txbuf, then return the number
-	   of bytes in the buffer.
+	   Place the response in the data section of iface->txbuf, and
+	   return the number of bytes placed in that section.
 	   (This will be transmitted as a response). */
 	uint8_t (*cmd) ( const sric_if_t *iface );
 } sric_cmd_t;

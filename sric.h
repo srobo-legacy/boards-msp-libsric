@@ -33,6 +33,7 @@ enum {
 #define sric_addr_set_ack(x) (x | 0x80)
 #define sric_addr_is_ack(x) ( x & 0x80 )
 #define sric_frame_is_ack(buf) ( sric_addr_is_ack(buf[SRIC_DEST]) )
+#define sric_frame_set_ack(buf) do { buf[SRIC_DEST] = sric_addr_set_ack(buf[SRIC_DEST]); } while (0)
 
 /**** Special return values for the command rx callback to return: *****/
 /* The response will be provided to the interface later */

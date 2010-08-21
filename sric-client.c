@@ -39,7 +39,13 @@ uint8_t sric_client_rx( const sric_if_t *iface )
 		if( cmd < sric_cmd_num ) {
 			uint8_t len = sric_commands[cmd].cmd( iface );
 
-			return len;
+			iface->txbuf[0] = 0x7e;
+			iface->txbuf[SRIC_DEST] = rxbuf[SRIC_SRC];
+			iface->txbuf[SRIC_SRC] = sric_addr;
+			iface->txbuf[SRIC_LEN] = len;
+			sric_frame_set_ack(iface->txbuf);
+
+			return len + SRIC_HEADER_SIZE;
 		}
 	}
 
