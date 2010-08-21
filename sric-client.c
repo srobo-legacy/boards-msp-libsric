@@ -23,14 +23,16 @@ void sric_client_init( void )
 
 uint8_t sric_client_rx( const sric_if_t *iface )
 {
+	uint8_t *rxbuf = iface->rxbuf;
+
 	/* Check that the frame's for us */
-	if( sric_rxbuf[SRIC_DEST] != sric_addr )
+	if( rxbuf[SRIC_DEST] != sric_addr )
 		/* TODO: Process broadcasts */
 		return 0;
 
 	/* Command frame? */
-	if( !sric_frame_is_ack( sric_rxbuf) ) {
-		uint8_t *data = sric_rxbuf + SRIC_DATA;
+	if( !sric_frame_is_ack( rxbuf ) ) {
+		uint8_t *data = rxbuf + SRIC_DATA;
 
 		/* First byte of data is command byte */
 		uint8_t cmd = data[0];
