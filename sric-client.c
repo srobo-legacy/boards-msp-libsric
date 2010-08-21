@@ -28,7 +28,7 @@ uint8_t sric_client_rx( const sric_if_t *iface )
 	/* Check that the frame's for us */
 	if( rxbuf[SRIC_DEST] != sric_addr )
 		/* TODO: Process broadcasts */
-		return 0;
+		return SRIC_IGNORE;
 
 	/* Command frame? */
 	if( !sric_frame_is_ack( rxbuf ) ) {
@@ -44,7 +44,6 @@ uint8_t sric_client_rx( const sric_if_t *iface )
 		}
 	}
 
-	/* TODO... */
-	while(1);
-	return 0;
+	/* Reply with some kind of globally standardised error frame! */
+	return SRIC_IGNORE;
 }
