@@ -35,7 +35,7 @@ uint8_t sric_client_rx( const sric_if_t *iface )
 		/* First byte of data is command byte */
 		uint8_t cmd = data[0];
 
-		if( sric_cmd_num < cmd ) {
+		if( cmd < sric_cmd_num ) {
 			uint8_t len = sric_commands[cmd].cmd( iface );
 
 			return len;
