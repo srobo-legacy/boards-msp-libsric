@@ -14,6 +14,7 @@
     along with this program; if not, write to the Free Software
     Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA. */
 #include "sric-gw.h"
+#include <string.h>
 
 /* Events that can influence the state machine */
 typedef enum {
@@ -50,12 +51,8 @@ static void gw_fsm( gw_event_t event )
 	case S_IDLE:
 		/* Idling away, plotting our revenge */
 		if( event == EV_HOST_RX ) {
-			uint8_t i;
 			/* Transmit frame on SRIC */
-			for( i=0;
-			     i<(hostser_rxbuf[SRIC_LEN] + SRIC_HEADER_SIZE);
-			     i++ )
-				sric_txbuf[i] = hostser_rxbuf[i];
+			memcpy( sric_txbuf, hostser_rxbuf, hostser_rxbuf[SRIC_LEN] + SRIC_HEADER_SIZE );
 
 			sric_if.tx_lock();
 			sric_if.tx_cmd_start(hostser_rxbuf[SRIC_LEN] + SRIC_HEADER_SIZE);
@@ -69,13 +66,9 @@ static void gw_fsm( gw_event_t event )
 	case S_SRIC_TX_CMD:
 		/* Waiting for the SRIC client to get back to us */
 		if( event == EV_SRIC_RX ) {
-			uint8_t i;
 			/* Response received on SRIC */
 			/* Transmit it to the host */
-			for( i=0;
-			     i<(sric_rxbuf[SRIC_LEN] + SRIC_HEADER_SIZE);
-			     i++ )
-				hostser_txbuf[i] = sric_rxbuf[i];
+			memcpy( hostser_txbuf, sric_rxbuf, sric_rxbuf[SRIC_LEN] + SRIC_HEADER_SIZE );
 
 			hostser_tx();
 			gw_state = S_HOST_TX_RESP;
