@@ -99,6 +99,18 @@ static void crc_txbuf( void )
 	sric_txbuf[ SRIC_DATA + len + 1 ] = (c >> 8) & 0xff;
 }
 
+static void start_tx( void )
+{
+	/* Add an additional 0x7e on the end of the frame
+	   to allow stop bits to be received correctly */
+	sric_txbuf[ sric_txlen ] = 0x7e;
+	sric_txlen++;
+
+	lvds_tx_en();
+	tx.out_pos = 0;
+	sric_conf.usart_tx_start(sric_conf.usart_n);
+}
+
 static void fsm( event_t ev )
 {
 	switch(state) {
@@ -117,12 +129,9 @@ static void fsm( event_t ev )
 				state = S_WAIT_ASM_RESP;
 			} else if( l <= MAX_PAYLOAD ) {
 				crc_txbuf();
+				sric_txlen = l + 2;
 
-				/* Start transmitting response */
-				lvds_tx_en();
-				tx.out_pos = 0;
-				sric_conf.usart_tx_start(sric_conf.usart_n);
-
+				start_tx();
 				state = S_TX_RESP;
 			}
 		}
@@ -140,18 +149,7 @@ static void fsm( event_t ev )
 			crc_txbuf();
 			sric_txlen += 2;
 
-			/* Add an additional 0x7e on the end of the frame
-			 to allow stop bits to be received correctly */
-			sric_txbuf[ sric_txlen ] = 0x7e;
-			sric_txlen++;
-
-			/* Ready to start transmitting */
-			lvds_tx_en();
-
-			/* Start transmitting */
-			tx.out_pos = 0;
-			sric_conf.usart_tx_start(sric_conf.usart_n);
-
+			start_tx();
 			state = S_TX;
 		}
 		break;
