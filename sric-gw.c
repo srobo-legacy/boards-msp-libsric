@@ -53,6 +53,7 @@ static void gw_fsm( gw_event_t event )
 		if( event == EV_HOST_RX ) {
 			/* Transmit frame on SRIC */
 			memcpy( sric_txbuf, hostser_rxbuf, hostser_rxbuf[SRIC_LEN] + SRIC_HEADER_SIZE );
+			hostser_rx_done();
 
 			sric_if.tx_lock();
 			sric_if.tx_cmd_start(hostser_rxbuf[SRIC_LEN] + SRIC_HEADER_SIZE);
