@@ -202,7 +202,7 @@ void hostser_rx_done( void )
 
 bool hostser_tx_busy( void )
 {
-	return hostser_state == HS_IDLE;
+	return hostser_state != HS_IDLE;
 }
 
 void hostser_tx( void )
