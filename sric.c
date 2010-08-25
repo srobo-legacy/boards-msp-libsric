@@ -181,6 +181,7 @@ static void fsm( event_t ev )
 
 			state = S_IDLE;
 		}
+		break;
 
 	default:
 		state = S_IDLE;
