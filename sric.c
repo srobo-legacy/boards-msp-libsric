@@ -254,14 +254,11 @@ void sric_rx_cb( uint8_t b )
 	recv_crc = sric_rxbuf[ rxbuf_pos-2 ];
 	recv_crc |= sric_rxbuf[ rxbuf_pos-1 ] << 8;
 
-	if( crc == recv_crc ) {
+	if( crc == recv_crc )
 		/* We have a valid frame :-O */
 		fsm( EV_RX );
-	} else
-		/* CRC's invalid -- throw it away */
-		rxbuf_pos = 0;
 
-	nop();
+	rxbuf_pos = 0;
 }
 
 static void sric_tx_lock( void )
