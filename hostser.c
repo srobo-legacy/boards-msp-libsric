@@ -130,12 +130,11 @@ void hostser_rx_cb( uint8_t b )
 	recv_crc = hostser_rxbuf[ rxbuf_pos-2 ];
 	recv_crc |= hostser_rxbuf[ rxbuf_pos-1 ] << 8;
 
-	if( crc == recv_crc ) {
+	if( crc == recv_crc )
 		/* We have a valid frame :-O */
 		fsm( EV_RX_FRAME_RECEIVED );
-	} else
-		/* CRC's invalid -- throw it away */
-		rxbuf_pos = 0;
+		
+	rxbuf_pos = 0;
 }
 
 static void fsm( hs_event_t event )
