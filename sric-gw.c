@@ -26,6 +26,8 @@ typedef enum {
 	EV_SRIC_RX,
 	/* Finished transmitting a frame over SRIC */
 	EV_SRIC_TX_COMPLETE,
+	/* SRIC interface experienced an error */
+	EV_SRIC_ERROR,
 } gw_event_t;
 
 /* State machine states */
@@ -73,6 +75,10 @@ static void gw_fsm( gw_event_t event )
 
 			hostser_tx();
 			gw_state = S_HOST_TX_RESP;
+		} else if( event == EV_SRIC_ERROR ) {
+			/* SRIC interface has given up waiting for the slave */
+			/* TODO: Perhaps notify the host of the error */
+			gw_state = S_IDLE;
 		}
 
 	case S_HOST_TX_RESP:
@@ -109,4 +115,9 @@ uint8_t sric_gw_sric_rxcmd( const sric_if_t *iface )
 void sric_gw_sric_rxresp( const sric_if_t *iface )
 {
 	gw_fsm( EV_SRIC_RX );
+}
+
+void sric_gw_sric_err( void )
+{
+	gw_fsm( EV_SRIC_ERROR );
 }

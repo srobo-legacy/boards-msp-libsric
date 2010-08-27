@@ -17,6 +17,7 @@
 #include <io.h>
 #include <sys/cdefs.h>
 #include "crc16.h"
+#include <drivers/sched.h>
 
 /* One additional byte for the 0x7e for correct stop bit receivage */
 uint8_t sric_txbuf[SRIC_TXBUF_SIZE+1];
@@ -33,6 +34,8 @@ static uint8_t rxbuf_pos;
 extern const sric_conf_t sric_conf;
 uint8_t sric_addr;
 
+static sched_task_t timeout_task;
+
 /* Events that trigger state changes */
 typedef enum {
 	/* Request for a lock on the transmit buffer */
@@ -43,6 +46,8 @@ typedef enum {
 	EV_TX_DONE,
 	/* Frame received */
 	EV_RX,
+	/* Timeout waiting for response */
+	EV_TIMEOUT,
 } event_t;
 
 /* States */
@@ -111,6 +116,12 @@ static void start_tx( void )
 	sric_conf.usart_tx_start(sric_conf.usart_n);
 }
 
+static bool timeout( void *ud )
+{
+	fsm( EV_TIMEOUT );
+	return false;
+}
+
 static void fsm( event_t ev )
 {
 	switch(state) {
@@ -160,6 +171,10 @@ static void fsm( event_t ev )
 			lvds_tx_dis();
 			sric_conf.usart_rx_gate(sric_conf.usart_n, true);
 
+			/* Setup a long timeout for the response */
+			timeout_task.t = 15000;
+			timeout_task.cb = timeout;
+
 			state = S_WAIT_RESP;
 		}
 		break;
@@ -167,8 +182,18 @@ static void fsm( event_t ev )
 	case S_WAIT_RESP:
 		/* Waiting for a response */
 		if(ev == EV_RX) {
+			/* Cancel the timeout */
+			sched_rem(&timeout_task);
+
 			if( sric_conf.rx_resp != NULL )
 				sric_conf.rx_resp( &sric_if );
+
+			state = S_IDLE;
+		} else if( ev == EV_TIMEOUT ) {
+			/* Emit the error callback */
+			if( sric_conf.error != NULL )
+				sric_conf.error();
+
 			state = S_IDLE;
 		} /* TODO: Repeat transmission if token comes back around */
 		break;

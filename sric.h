@@ -70,6 +70,9 @@ typedef struct {
 	   Only called if not NULL. */
 	void (*rx_resp) ( const sric_if_t *iface );
 
+	/* Error: Called when a timeout occurs
+	   The interface resets itself when this happens. */
+	void (*error) (void);
 } sric_conf_t;
 
 /* Our SRIC address */
