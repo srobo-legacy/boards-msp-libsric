@@ -111,6 +111,7 @@ static void start_tx( void )
 	sric_txbuf[ sric_txlen ] = 0x7e;
 	sric_txlen++;
 
+	sric_conf.usart_rx_gate(sric_conf.usart_n, false);
 	lvds_tx_en();
 	tx.out_pos = 0;
 	sric_conf.usart_tx_start(sric_conf.usart_n);
