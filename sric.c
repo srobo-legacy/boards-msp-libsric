@@ -122,6 +122,14 @@ static bool timeout( void *ud )
 	return false;
 }
 
+static void register_timeout( void )
+{
+	/* Setup a long timeout for the response */
+	timeout_task.t = 15000;
+	timeout_task.cb = timeout;
+	sched_add(&timeout_task);
+}
+
 static void fsm( event_t ev )
 {
 	switch(state) {
@@ -160,6 +168,7 @@ static void fsm( event_t ev )
 			crc_txbuf();
 			sric_txlen += 2;
 
+			register_timeout();
 			start_tx();
 			state = S_TX;
 		}
@@ -170,10 +179,6 @@ static void fsm( event_t ev )
 		if(ev == EV_TX_DONE) {
 			lvds_tx_dis();
 			sric_conf.usart_rx_gate(sric_conf.usart_n, true);
-
-			/* Setup a long timeout for the response */
-			timeout_task.t = 15000;
-			timeout_task.cb = timeout;
 
 			state = S_WAIT_RESP;
 		}
