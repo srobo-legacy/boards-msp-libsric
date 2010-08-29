@@ -23,6 +23,11 @@
 uint8_t sric_txbuf[SRIC_TXBUF_SIZE+1];
 uint8_t sric_txlen;
 
+/* Number of token loops to retransmit after */
+#define TOKEN_THRESHOLD 3
+/* Number of times the token's been seen this loop */
+static uint8_t token_count;
+
 static struct {
 	/* Next byte to be transmitted */
 	uint8_t out_pos;
@@ -48,6 +53,8 @@ typedef enum {
 	EV_RX,
 	/* Timeout waiting for response */
 	EV_TIMEOUT,
+	/* Got token */
+	EV_GOT_TOKEN,
 } event_t;
 
 /* States */
@@ -58,10 +65,17 @@ static volatile enum {
 	S_WAIT_ASM_RESP,
 	/* Transmit buffer's locked and being filled */
 	S_TX_LOCKED,
+	/* Waiting for the token to transmit command */
+	S_TX_WAIT_TOKEN,
 	/* Transmitting */
 	S_TX,
+	/* Transmitting, but timeout occurred.
+	   Waiting for tx buffer to run dry before returning to S_IDLE */
+	S_TX_TIMED_OUT,
 	/* Waiting for response */
 	S_WAIT_RESP,
+	/* Waiting for token to transmit response */
+	S_TX_RESP_WAIT_TOKEN,
 	/* Transmitting response */
 	S_TX_RESP,
 } state;
@@ -151,8 +165,8 @@ static void fsm( event_t ev )
 				crc_txbuf();
 				sric_txlen = l + 2;
 
-				start_tx();
-				state = S_TX_RESP;
+				sric_conf.token_drv->req();
+				state = S_TX_RESP_WAIT_TOKEN;
 			}
 		}
 		break;
@@ -160,6 +174,7 @@ static void fsm( event_t ev )
 	case S_WAIT_ASM_RESP:
 		/* TODO! */
 		while(1);
+		/* sric_conf.token_drv->req(); */
 		break;
 
 	case S_TX_LOCKED:
@@ -169,7 +184,15 @@ static void fsm( event_t ev )
 			crc_txbuf();
 			sric_txlen += 2;
 
+			sric_conf.token_drv->req();
+			state = S_TX_WAIT_TOKEN;
+		}
+		break;
+
+	case S_TX_WAIT_TOKEN:
+		if( ev == EV_GOT_TOKEN ) {
 			register_timeout();
+			token_count = 0;
 			start_tx();
 			state = S_TX;
 		}
@@ -180,8 +203,35 @@ static void fsm( event_t ev )
 		if(ev == EV_TX_DONE) {
 			lvds_tx_dis();
 			sric_conf.usart_rx_gate(sric_conf.usart_n, true);
+			sric_conf.token_drv->release();
+
+			/* Re-request the token for retransmission */
+			sric_conf.token_drv->req();
 
 			state = S_WAIT_RESP;
+		} else if( ev == EV_TIMEOUT ) {
+			/* Timeout occured whilst transmitting */
+			/* Need to mop up the events cleanly,
+			   so go via the S_TX_TIMED_OUT state to wait for the tx to finish. */
+
+			/* Don't let anyone hear the rest of our transmission */
+			lvds_tx_dis();
+
+			state = S_TX_TIMED_OUT;
+		}
+		break;
+
+	case S_TX_TIMED_OUT:
+		/* Finished transmitting */
+		if(ev == EV_TX_DONE) {
+			sric_conf.usart_rx_gate(sric_conf.usart_n, true);
+			sric_conf.token_drv->release();
+
+			/* Emit the error callback */
+			if( sric_conf.error != NULL )
+				sric_conf.error();
+
+			state = S_IDLE;
 		}
 		break;
 
@@ -190,18 +240,41 @@ static void fsm( event_t ev )
 		if(ev == EV_RX) {
 			/* Cancel the timeout */
 			sched_rem(&timeout_task);
+			/* No longer need the token for retransmission */
+			sric_conf.token_drv->cancel_req();
 
 			if( sric_conf.rx_resp != NULL )
 				sric_conf.rx_resp( &sric_if );
 
 			state = S_IDLE;
 		} else if( ev == EV_TIMEOUT ) {
+			/* Drop our token request */
+			sric_conf.token_drv->cancel_req();
+
 			/* Emit the error callback */
 			if( sric_conf.error != NULL )
 				sric_conf.error();
 
 			state = S_IDLE;
-		} /* TODO: Repeat transmission if token comes back around */
+		} else if( ev == EV_GOT_TOKEN ) {
+			token_count++;
+
+			if(token_count >= TOKEN_THRESHOLD) {
+				token_count = 0;
+				start_tx();
+				state = S_TX;
+			} else {
+				sric_conf.token_drv->release();
+				sric_conf.token_drv->req();
+			}
+		}
+		break;
+
+	case S_TX_RESP_WAIT_TOKEN:
+		if( ev == EV_GOT_TOKEN ) {
+			start_tx();
+			state = S_TX_RESP;
+		}
 		break;
 
 	case S_TX_RESP:
@@ -209,7 +282,7 @@ static void fsm( event_t ev )
 		if(ev == EV_TX_DONE ) {
 			lvds_tx_dis();
 			sric_conf.usart_rx_gate(sric_conf.usart_n, true);
-
+			sric_conf.token_drv->release();
 			state = S_IDLE;
 		}
 		break;
@@ -303,4 +376,9 @@ static void sric_tx_start( uint8_t len )
 {
 	sric_txlen = len;
 	fsm(EV_TX_START);
+}
+
+void sric_haz_token( void )
+{
+	fsm(EV_GOT_TOKEN);
 }

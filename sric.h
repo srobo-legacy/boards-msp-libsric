@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "sric-if.h"
+#include "token-drv.h"
 
 #define MAX_PAYLOAD 64
 
@@ -53,6 +54,8 @@ typedef struct {
 	/* n to pass to the usart functions */
 	uint8_t usart_n;
 
+	const token_drv_t *token_drv;
+
 	/*** Callbacks ***/
 	/* Received a command frame.
 	   This callback can be used in two ways:
@@ -89,5 +92,7 @@ void sric_init( void );
 bool sric_tx_cb( uint8_t *b );
 /* Callback for each byte received */
 void sric_rx_cb( uint8_t b );
+/* Callback for got the token */
+void sric_haz_token( void );
 
 #endif	/* __SRIC_H */
