@@ -7,7 +7,7 @@ static bool have_token;
 static bool requested;
 
 #define to_low() do { (*token_msp_conf.to_port) &= ~token_msp_conf.to_mask; } while (0)
-#define to_high() do { (*token_msp_conf.to_port) | token_msp_conf.to_mask; } while (0)
+#define to_high() do { (*token_msp_conf.to_port) |= token_msp_conf.to_mask; } while (0)
 
 static void emit_token( void )
 {
