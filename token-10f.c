@@ -48,6 +48,8 @@ void token_10f_init( void )
 	*token_10f_conf.gt_dir |= token_10f_conf.gt_mask;
 	*token_10f_conf.ht_dir &= ~token_10f_conf.ht_mask;
 
+	gt_low();
+
 	token_int.mask = token_10f_conf.ht_mask;
 	token_int.int_cb = token_isr;
 	/* mmm... hacky */
