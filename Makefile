@@ -1,6 +1,6 @@
 
 O_FILES := hostser.o crc16.o sric.o sric-gw.o sric-client.o \
-	token-dummy.o token-dir.o
+	token-dummy.o token-dir.o token-msp.o
 
 all: libsric.a
 
