@@ -100,7 +100,7 @@ void sric_init( void )
 	if( SRIC_DIRECTOR ) {
 		sric_addr = 1;
 	} else {
-		sric_addr = 3;
+		sric_addr = 0;
 	}
 
 	lvds_tx_dis();
