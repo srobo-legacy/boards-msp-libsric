@@ -92,20 +92,19 @@ const sric_if_t sric_if = {
 
 static void fsm( event_t ev );
 
-#define SRIC_TXEN (1<<0)
-#define lvds_tx_en() do { P3OUT |= SRIC_TXEN; } while(0)
-#define lvds_tx_dis() do { P3OUT &= ~SRIC_TXEN; } while(0)
+#define lvds_tx_en() do { (*sric_conf.txen_port) |= sric_conf.txen_mask; } while(0)
+#define lvds_tx_dis() do { (*sric_conf.txen_port) &= ~sric_conf.txen_mask; } while(0)
 
 void sric_init( void )
 {
 	if( SRIC_DIRECTOR ) {
 		sric_addr = 1;
 	} else {
-		sric_addr = 0;
+		sric_addr = 3;
 	}
 
 	lvds_tx_dis();
-	P3DIR |= SRIC_TXEN;
+	(*sric_conf.txen_dir) |= sric_conf.txen_mask;
 }
 
 /* Set the CRC in the transmit buffer */

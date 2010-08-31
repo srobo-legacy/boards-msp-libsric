@@ -2,6 +2,7 @@
 #define __SRIC_H
 #include <stdbool.h>
 #include <stdint.h>
+#include <io.h>
 #include "sric-if.h"
 #include "token-drv.h"
 
@@ -55,6 +56,11 @@ typedef struct {
 	uint8_t usart_n;
 
 	const token_drv_t *token_drv;
+
+	/* Registers and bitmask for controlling the TXEN line */
+	typeof(P1DIR) *txen_dir;
+	typeof(P1OUT) *txen_port;
+	uint8_t txen_mask;
 
 	/*** Callbacks ***/
 	/* Received a command frame.
