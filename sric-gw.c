@@ -16,6 +16,11 @@
 #include "sric-gw.h"
 #include <string.h>
 
+#if SRIC_DIRECTOR
+#include <drivers/sched.h>
+#include "token-dir.h"
+#endif
+
 /* Events that can influence the state machine */
 typedef enum {
 	/* Received a frame from the host */
@@ -28,10 +33,28 @@ typedef enum {
 	EV_SRIC_TX_COMPLETE,
 	/* SRIC interface experienced an error */
 	EV_SRIC_ERROR,
+	/* Start bus initialisation */
+	EV_SRIC_INIT,
+	/* Timeout */
+	EV_TIMEOUT,
 } gw_event_t;
 
 /* State machine states */
 typedef enum {
+	/* Uninitialised state */
+	S_UNINIT,
+	/* Sending out reset commands to the bus */
+	S_RESET_BUS,
+	/* Pausing waiting for the token to propagate out */
+	S_TOK_PAUSE,
+	/* Sending a node its address */
+	S_SEND_ADDRESS,
+	/* Waiting for client info to be sent to host */
+	S_WAIT_INFO_TO_HOST,
+	/* Waiting for the token to be advanced */
+	S_WAIT_ADVANCE_ACK,
+	/* Waiting for the token or timeout */
+	S_WAIT_TOK,
 	/* Idle */
 	S_IDLE,
 	/* Transmitting the command the host sent us over sric */
@@ -40,16 +63,143 @@ typedef enum {
 	S_HOST_TX_RESP,
 } state_t;
 
-static state_t gw_state = S_IDLE;
+static void gw_fsm( gw_event_t event );
+
+static bool gw_timeout_handler( void *ud )
+{
+	gw_fsm( EV_TIMEOUT );
+	return false;
+}
+
+static state_t gw_state;
 
 void sric_gw_init( void )
 {
+	if( SRIC_DIRECTOR ) {
+		gw_state = S_UNINIT;
+	} else {
+		gw_state = S_IDLE;
+	}
 }
+
+#if (SRIC_DIRECTOR)
+/* Send RESET command on the SRIC bus */
+static void send_reset( void )
+{
+	/* TODO: Populate SRIC frame with RESET command and transmit it */
+}
+
+/* Send ADDRESS_ASSIGN command on the SRIC bus */
+static void send_address( uint8_t addr )
+{
+	/* TODO: Populate SRIC frame with ADDRESS_ASSIGN command and transmit it */
+}
+
+/* Send ADVANCE_TOKEN command on the SRIC bus */
+static void send_tok_advance( uint8_t addr )
+{
+	/* TODO: Populate SRIC frame with ADVANCE_TOKEN and transmit it */
+}
+
+static sched_task_t gw_task;
+static bool gw_timeout_cb( void *udata );
+
+static void gw_register_timeout( void )
+{
+	gw_task.t = 50;
+	gw_task.cb = gw_timeout_cb;
+	sched_add( &gw_task );
+}
+#endif
 
 /* State machine for this gateway */
 static void gw_fsm( gw_event_t event )
 {
 	switch( gw_state ) {
+#if (SRIC_DIRECTOR)
+		static uint8_t reset_count;
+		static uint8_t assign_addr;
+
+	case S_UNINIT:
+		/* Bus not yet initialised */
+		if( event == EV_SRIC_INIT ) {
+			sric_if.use_token( false );
+			reset_count = 0;
+			assign_addr = 5;
+
+			send_reset();
+			gw_state = S_RESET_BUS;
+		}
+		break;
+
+	case S_RESET_BUS:
+		/* Broadcast transmission's complete */
+		if( event == EV_SRIC_RX ) {
+			reset_count++;
+			if( reset_count == 10 ) {
+				token_dir_emit_first();
+				gw_register_timeout();
+
+				gw_state = S_TOK_PAUSE;
+			} else {
+				send_reset();
+			}
+		}
+		break;
+
+	case S_TOK_PAUSE:
+		if( event == EV_TIMEOUT ) {
+			send_address(assign_addr);
+
+			gw_state = S_SEND_ADDRESS;
+		}
+		break;
+
+	case S_SEND_ADDRESS:
+		if ( event == EV_SRIC_RX ) {
+			/* TODO: Tell the host about the situation */
+			/* TODO: gw_state = S_WAIT_INFO_TO_HOST; */
+
+			token_dir_drv.req();
+			send_tok_advance(assign_addr);
+
+			/* Move straight to S_WAIT_ADVANCE_ACK for now -- transmit to host soon! */
+			gw_state = S_WAIT_ADVANCE_ACK;
+		}
+		break;
+
+	case S_WAIT_INFO_TO_HOST:
+		break;
+
+	case S_WAIT_ADVANCE_ACK:
+		if( event == EV_SRIC_RX ) {
+			gw_register_timeout();
+			gw_state = S_WAIT_TOK;
+		}
+		break;
+
+	case S_WAIT_TOK:
+		if( event == EV_TIMEOUT ) {
+			if( token_dir_have_token() ) {
+				/* We've finished enumerating the bus */
+				/* TODO: Tell the host we're done */
+				token_dir_drv.release();
+				sric_if.use_token(true);
+				gw_state = S_IDLE;
+				break;
+			}
+
+			/* Send the next guy his address */
+			assign_addr++;
+			if( assign_addr == 127 )
+				while(1);
+			send_address(assign_addr);
+
+			gw_state = S_SEND_ADDRESS;
+		}
+		break;
+#endif
+
 	case S_IDLE:
 		/* Idling away, plotting our revenge */
 		if( event == EV_HOST_RX ) {
@@ -120,4 +270,10 @@ void sric_gw_sric_rxresp( const sric_if_t *iface )
 void sric_gw_sric_err( void )
 {
 	gw_fsm( EV_SRIC_ERROR );
+}
+
+static bool gw_timeout_cb( void *udata )
+{
+	gw_fsm ( EV_TIMEOUT );
+	return false;
 }
