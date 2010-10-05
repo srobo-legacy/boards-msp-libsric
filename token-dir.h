@@ -6,6 +6,7 @@
    * Token loss detection and regeneration */
 #include "token-drv.h"
 #include <io.h>
+#include <stdbool.h>
 #include <stdint.h>
 
 typedef struct {
@@ -26,5 +27,11 @@ extern const token_dir_conf_t token_dir_conf;
 extern const token_drv_t token_dir_drv;
 
 void token_dir_init( void );
+
+/* Emit the first token */
+void token_dir_emit_first( void );
+
+/* Returns true if we have the token */
+bool token_dir_have_token( void );
 
 #endif	/* __TOKEN_DIR_H */

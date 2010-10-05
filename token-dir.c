@@ -100,6 +100,14 @@ void token_dir_init( void )
 		P2IES &= ~token_dir_conf.ti_mask;
 		P2IE |= token_dir_conf.ti_mask;
 	}
+}
 
+void token_dir_emit_first( void )
+{
 	emit_token();
+}
+
+bool token_dir_have_token( void )
+{
+	return have_token;
 }
