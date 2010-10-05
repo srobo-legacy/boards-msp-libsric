@@ -24,6 +24,11 @@ typedef struct {
 	   Must only be called when the rx_cmd callback has returned
 	   SRIC_RESPONSE_DEFER. */
 	void (*tx_response) ( uint8_t len );
+
+	/* Set whether to use the token.
+	    true: Normal operation with token.
+	   false: Timeout based operation -- for initialisation. */
+	void (*use_token) ( bool use );
 } sric_if_t;
 
 #endif	/* __SRIC_IF_H */

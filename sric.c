@@ -82,12 +82,14 @@ static volatile enum {
 
 static void sric_tx_lock( void );
 static void sric_tx_start( uint8_t len );
+static void use_token( bool use );
 
 const sric_if_t sric_if = {
 	.txbuf = sric_txbuf,
 	.rxbuf = sric_rxbuf,
 	.tx_lock = sric_tx_lock,
 	.tx_cmd_start = sric_tx_start,
+	.use_token = use_token,
 };
 
 static void fsm( event_t ev );
@@ -426,4 +428,9 @@ static void sric_tx_start( uint8_t len )
 void sric_haz_token( void )
 {
 	fsm(EV_GOT_TOKEN);
+}
+
+static void use_token( bool use )
+{
+	sric_use_token_buffered = use;
 }
