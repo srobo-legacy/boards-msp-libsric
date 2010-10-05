@@ -289,7 +289,7 @@ static void fsm( event_t ev )
 				state = S_TX;
 			}
 
-		} else if( ev == EV_GOT_TOKEN ) {
+		} else if( ev == EV_GOT_TOKEN && sric_use_token ) {
 			token_count++;
 
 			if(token_count >= TOKEN_THRESHOLD) {
