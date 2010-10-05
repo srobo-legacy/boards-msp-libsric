@@ -132,6 +132,7 @@ static bool timeout( void *ud )
 }
 
 static bool sric_use_token = false;
+static bool sric_use_token_buffered = false;
 
 static void register_timeout( void )
 {
@@ -149,6 +150,11 @@ static void fsm( event_t ev )
 {
 	switch(state) {
 	case S_IDLE:
+		if( ev == EV_TX_LOCK || ev == EV_RX ) {
+			if( sric_use_token_buffered != sric_use_token )
+				sric_use_token = sric_use_token_buffered;
+		}
+
 		if(ev == EV_TX_LOCK) {
 			/* Disable the receiver */
 			sric_conf.usart_rx_gate(sric_conf.usart_n, false);
