@@ -27,7 +27,8 @@ static uint8_t syscmd_addr_assign( const sric_if_t *iface );
 /* Send reply containing info */
 static uint8_t syscmd_addr_info( const sric_if_t *iface );
 
-/* Table of 'system' commands */
+/* Table of 'system' commands.
+   The order of these is important! */
 static const sric_cmd_t syscmds[] =
 {
 	{ syscmd_reset },
