@@ -119,11 +119,6 @@ static void crc_txbuf( void )
 
 static void start_tx( void )
 {
-	/* Add an additional 0x7e on the end of the frame
-	   to allow stop bits to be received correctly */
-	sric_txbuf[ sric_txlen ] = 0x7e;
-	sric_txlen++;
-
 	sric_conf.usart_rx_gate(sric_conf.usart_n, false);
 	lvds_tx_en();
 	tx.out_pos = 0;
@@ -333,6 +328,12 @@ bool sric_tx_cb( uint8_t *b )
 	static bool escape_next = false;
 
 	if( tx.out_pos == sric_txlen ) {
+		/* Add an additional 0x7e on the end of the frame
+		   to allow stop bits to be received correctly */
+		*b = 0x7e;
+		tx.out_pos++;
+		return true;
+	} else if( tx.out_pos > sric_txlen ) {
 		/* Transmission complete */
 		fsm( EV_TX_DONE );
 		return false;
