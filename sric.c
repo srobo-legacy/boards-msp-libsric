@@ -225,17 +225,29 @@ static void fsm( event_t ev )
 			lvds_tx_dis();
 			sric_conf.usart_rx_gate(sric_conf.usart_n, true);
 
-			if( sric_use_token ) {
+			if( sric_use_token )
 				sric_conf.token_drv->release();
 
+			if ( sric_txbuf[SRIC_DEST] == 0 ) {
+				/* Broadcast has no response */
+				if( sric_conf.rx_resp != NULL )
+					sric_conf.rx_resp( &sric_if );
+
+				state = S_IDLE;
+
+			} else if( sric_use_token ) {
 				/* Re-request the token for retransmission */
 				sric_conf.token_drv->req();
+
+				state = S_WAIT_RESP;
+
 			} else {
 				/* Register timeout for retransmission */
 				register_timeout();
+
+				state = S_WAIT_RESP;
 			}
 
-			state = S_WAIT_RESP;
 		} else if( ev == EV_TIMEOUT ) {
 			/* Timeout occured whilst transmitting */
 			/* Need to mop up the events cleanly,

@@ -76,7 +76,8 @@ typedef struct {
 	uint8_t (*rx_cmd) ( const sric_if_t *iface );
 
 	/* Received a response frame
-	   Only called if not NULL. */
+	   Only called if not NULL.
+	   Called upon transmission completion when broadcasting. */
 	void (*rx_resp) ( const sric_if_t *iface );
 
 	/* Error: Called when a timeout occurs
