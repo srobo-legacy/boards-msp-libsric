@@ -131,15 +131,19 @@ static bool timeout( void *ud )
 	return false;
 }
 
+static bool sric_use_token = false;
+
 static void register_timeout( void )
 {
 	/* Setup a long timeout for the response */
-	timeout_task.t = 15000;
+	if( sric_use_token )
+		timeout_task.t = 15000;
+	else
+		timeout_task.t = 50;
+
 	timeout_task.cb = timeout;
 	sched_add(&timeout_task);
 }
-
-static bool sric_use_token = true;
 
 static void fsm( event_t ev )
 {
