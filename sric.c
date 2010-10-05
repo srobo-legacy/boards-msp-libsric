@@ -144,6 +144,8 @@ static void register_timeout( void )
 	sched_add(&timeout_task);
 }
 
+static bool sric_use_token = true;
+
 static void fsm( event_t ev )
 {
 	switch(state) {
@@ -164,8 +166,13 @@ static void fsm( event_t ev )
 				crc_txbuf();
 				sric_txlen = l + 2;
 
-				sric_conf.token_drv->req();
-				state = S_TX_RESP_WAIT_TOKEN;
+				if( sric_use_token ) {
+					sric_conf.token_drv->req();
+					state = S_TX_RESP_WAIT_TOKEN;
+				} else {
+					start_tx();
+					state = S_TX_RESP;
+				}
 			}
 		}
 		break;
@@ -183,13 +190,21 @@ static void fsm( event_t ev )
 			crc_txbuf();
 			sric_txlen += 2;
 
-			sric_conf.token_drv->req();
-			state = S_TX_WAIT_TOKEN;
+			if( sric_use_token ) {
+				sric_conf.token_drv->req();
+				state = S_TX_WAIT_TOKEN;
+			} else {
+				/* Start transmission immediately */
+				token_count = 0;
+				start_tx();
+				state = S_TX;
+			}
 		}
 		break;
 
 	case S_TX_WAIT_TOKEN:
 		if( ev == EV_GOT_TOKEN ) {
+			/* Register timeout to reset in the event of waiting too long for the token */
 			register_timeout();
 			token_count = 0;
 			start_tx();
@@ -202,10 +217,16 @@ static void fsm( event_t ev )
 		if(ev == EV_TX_DONE) {
 			lvds_tx_dis();
 			sric_conf.usart_rx_gate(sric_conf.usart_n, true);
-			sric_conf.token_drv->release();
 
-			/* Re-request the token for retransmission */
-			sric_conf.token_drv->req();
+			if( sric_use_token ) {
+				sric_conf.token_drv->release();
+
+				/* Re-request the token for retransmission */
+				sric_conf.token_drv->req();
+			} else {
+				/* Register timeout for retransmission */
+				register_timeout();
+			}
 
 			state = S_WAIT_RESP;
 		} else if( ev == EV_TIMEOUT ) {
@@ -224,7 +245,8 @@ static void fsm( event_t ev )
 		/* Finished transmitting */
 		if(ev == EV_TX_DONE) {
 			sric_conf.usart_rx_gate(sric_conf.usart_n, true);
-			sric_conf.token_drv->release();
+			if( sric_use_token )
+				sric_conf.token_drv->release();
 
 			/* Emit the error callback */
 			if( sric_conf.error != NULL )
@@ -240,21 +262,35 @@ static void fsm( event_t ev )
 			/* Cancel the timeout */
 			sched_rem(&timeout_task);
 			/* No longer need the token for retransmission */
-			sric_conf.token_drv->cancel_req();
+			if( sric_use_token )
+				sric_conf.token_drv->cancel_req();
 
 			if( sric_conf.rx_resp != NULL )
 				sric_conf.rx_resp( &sric_if );
 
 			state = S_IDLE;
 		} else if( ev == EV_TIMEOUT ) {
-			/* Drop our token request */
-			sric_conf.token_drv->cancel_req();
+			if( sric_use_token ) {
+				/* We've spent too long waiting for a response */
+				/* Abort the whole situation */
 
-			/* Emit the error callback */
-			if( sric_conf.error != NULL )
-				sric_conf.error();
+				/* Drop our token request */
+				sric_conf.token_drv->cancel_req();
 
-			state = S_IDLE;
+				/* Emit the error callback */
+				if( sric_conf.error != NULL )
+					sric_conf.error();
+
+				state = S_IDLE;
+			} else {
+				/* Retransmit time */
+				start_tx();
+				register_timeout();
+
+				/* TODO: Abort after N retransmissions */
+				state = S_TX;
+			}
+
 		} else if( ev == EV_GOT_TOKEN ) {
 			token_count++;
 
