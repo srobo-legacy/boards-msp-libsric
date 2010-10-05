@@ -284,7 +284,6 @@ static void fsm( event_t ev )
 			} else {
 				/* Retransmit time */
 				start_tx();
-				register_timeout();
 
 				/* TODO: Abort after N retransmissions */
 				state = S_TX;
