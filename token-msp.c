@@ -40,6 +40,11 @@ static void cancel_req( void )
 	release();
 }
 
+static bool get_have_token( void )
+{
+	return have_token;
+}
+
 static void token_isr(uint16_t flags)
 {
 	if( have_token )
@@ -88,4 +93,5 @@ const token_drv_t token_msp_drv = {
 	.req = req,
 	.cancel_req = cancel_req,
 	.release = release,
+	.have_token = get_have_token,
 };

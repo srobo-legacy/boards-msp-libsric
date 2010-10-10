@@ -41,6 +41,11 @@ static void cancel_req( void )
 	release();
 }
 
+static bool get_have_token( void )
+{
+	return have_token;
+}
+
 static bool emit_delayed(void *ud)
 {
 	emit_token();
@@ -72,6 +77,7 @@ const token_drv_t token_dir_drv = {
 	.req = req,
 	.cancel_req = cancel_req,
 	.release = release,
+	.have_token = get_have_token,
 };
 
 static pinint_conf_t token_int;
@@ -107,7 +113,3 @@ void token_dir_emit_first( void )
 	emit_token();
 }
 
-bool token_dir_have_token( void )
-{
-	return have_token;
-}

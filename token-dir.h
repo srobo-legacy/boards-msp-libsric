@@ -31,7 +31,4 @@ void token_dir_init( void );
 /* Emit the first token */
 void token_dir_emit_first( void );
 
-/* Returns true if we have the token */
-bool token_dir_have_token( void );
-
 #endif	/* __TOKEN_DIR_H */

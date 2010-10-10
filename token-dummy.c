@@ -39,8 +39,17 @@ static void release( void )
 	/* Nothing to do! */
 }
 
+static bool have_token( void )
+{
+	/* Pretend to always have the token... */
+	/* This won't do what you want when enumerating... but this driver doesn't
+	 really do what you want anyway! */
+	return true;
+}
+
 const token_drv_t token_dummy_drv = {
 	.req = req,
 	.cancel_req = cancel_req,
 	.release = release,
+	.have_token = have_token,
 };

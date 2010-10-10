@@ -201,10 +201,10 @@ static void gw_fsm( gw_event_t event )
 
 	case S_WAIT_TOK:
 		if( event == EV_TIMEOUT ) {
-			if( token_dir_have_token() ) {
+			if( sric_conf.token_drv->have_token() ) {
 				/* We've finished enumerating the bus */
 				/* TODO: Tell the host we're done */
-				token_dir_drv.release();
+				sric_if.ctl( SRIC_CTL_RELEASE_TOK );
 				sric_if.use_token(true);
 				gw_state = S_IDLE;
 				break;

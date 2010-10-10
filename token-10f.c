@@ -20,6 +20,7 @@
 
 #define gt_low() do { (*token_10f_conf.gt_port) &= ~token_10f_conf.gt_mask; } while (0)
 #define gt_high() do { (*token_10f_conf.gt_port) |= token_10f_conf.gt_mask; } while (0)
+static bool have_token = false;
 
 static void req( void )
 {
@@ -28,16 +29,24 @@ static void req( void )
 
 static void release( void )
 {
+	have_token = false;
 	gt_low();
 }
 
 static void cancel_req( void )
 {
+	have_token = false;
 	release();
+}
+
+static bool get_have_token( void )
+{
+	return have_token;
 }
 
 static void token_isr(uint16_t flags)
 {
+	have_token = true;
 	token_10f_conf.haz_token();
 }
 
@@ -65,10 +74,13 @@ void token_10f_init( void )
 		P2IES &= ~token_10f_conf.ht_mask;
 		P2IE |= token_10f_conf.ht_mask;
 	}
+
+	have_token = false;
 }
 
 const token_drv_t token_10f_drv = {
 	.req = req,
 	.cancel_req = cancel_req,
 	.release = release,
+	.have_token = get_have_token,
 };
