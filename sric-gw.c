@@ -161,8 +161,10 @@ static void gw_fsm( gw_event_t event )
 
 				gw_state = S_TOK_PAUSE;
 			} else {
-				send_reset();
+				gw_register_timeout();
 			}
+		} else if( event == EV_TIMEOUT ) {
+			send_reset();
 		}
 		break;
 
