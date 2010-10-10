@@ -5,6 +5,11 @@
 
 /* Commands that can be fed to the ctl function */
 typedef enum {
+	/* Reset the SRIC interface into enumeration mode */
+	SRIC_CTL_RESET = (1<<0),
+
+	/* Release the token (for use in enumeration mode) */
+	SRIC_CTL_RELEASE_TOK = (1<<1),
 } sric_ctl_t;
 
 /* Struct describing a SRIC interface */

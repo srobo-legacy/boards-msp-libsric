@@ -137,6 +137,7 @@ static bool timeout( void *ud )
 
 static bool sric_use_token = false;
 static bool sric_use_token_buffered = false;
+static bool sric_reset_queued = false;
 
 static void register_timeout( void )
 {
@@ -148,6 +149,23 @@ static void register_timeout( void )
 
 	timeout_task.cb = timeout;
 	sched_add(&timeout_task);
+}
+
+static void proc_queued_reset( void )
+{
+	if( sric_reset_queued ) {
+		/* It's enumeration time */
+		sric_reset_queued = false;
+
+		/* Move to tokenless mode */
+		sric_use_token_buffered = false;
+
+		/* Throw away our address */
+		sric_addr = 0;
+
+		/* Request the token for enumeration */
+		sric_conf.token_drv->req();
+	}
 }
 
 static void fsm( event_t ev )
@@ -182,7 +200,8 @@ static void fsm( event_t ev )
 					start_tx();
 					state = S_TX_RESP;
 				}
-			}
+			} else
+				proc_queued_reset();
 		}
 		break;
 
@@ -338,6 +357,8 @@ static void fsm( event_t ev )
 			lvds_tx_dis();
 			sric_conf.usart_rx_gate(sric_conf.usart_n, true);
 			sric_conf.token_drv->release();
+
+			proc_queued_reset();
 			state = S_IDLE;
 		}
 		break;
@@ -451,4 +472,14 @@ static void use_token( bool use )
 
 static void sric_ctl ( sric_ctl_t c )
 {
+	switch(c)
+	{
+	case SRIC_CTL_RESET:
+		sric_reset_queued = true;
+		break;
+
+	case SRIC_CTL_RELEASE_TOK:
+		sric_conf.token_drv->release();
+		break;
+	}
 }
