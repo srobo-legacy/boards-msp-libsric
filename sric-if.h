@@ -3,6 +3,10 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+/* Commands that can be fed to the ctl function */
+typedef enum {
+} sric_ctl_t;
+
 /* Struct describing a SRIC interface */
 typedef struct {
 	/* Transmit and receive buffers */
@@ -29,6 +33,9 @@ typedef struct {
 	    true: Normal operation with token.
 	   false: Timeout based operation -- for initialisation. */
 	void (*use_token) ( bool use );
+
+	/* Perform some operation on the interface */
+	void (*ctl) ( sric_ctl_t c );
 } sric_if_t;
 
 #endif	/* __SRIC_IF_H */
