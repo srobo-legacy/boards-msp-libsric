@@ -86,13 +86,32 @@ void sric_gw_init( void )
 /* Send RESET command on the SRIC bus */
 static void send_reset( void )
 {
-	/* TODO: Populate SRIC frame with RESET command and transmit it */
+	sric_if.tx_lock();
+
+	sric_if.txbuf[0] = 0x7e;
+	sric_if.txbuf[SRIC_DEST] = 0;
+	sric_if.txbuf[SRIC_SRC] = sric_addr;
+	sric_if.txbuf[SRIC_LEN] = 1;
+	sric_if.txbuf[SRIC_DATA] = 0x80 | SRIC_SYSCMD_RESET;
+
+	sric_if.tx_lock();
+	sric_if.tx_cmd_start( sric_if.txbuf[SRIC_LEN] + SRIC_HEADER_SIZE );
 }
 
 /* Send ADDRESS_ASSIGN command on the SRIC bus */
 static void send_address( uint8_t addr )
 {
-	/* TODO: Populate SRIC frame with ADDRESS_ASSIGN command and transmit it */
+	sric_if.tx_lock();
+
+	sric_if.txbuf[0] = 0x7e;
+	sric_if.txbuf[SRIC_DEST] = 0;
+	sric_if.txbuf[SRIC_SRC] = sric_addr;
+	sric_if.txbuf[SRIC_LEN] = 2;
+	sric_if.txbuf[SRIC_DATA] = 0x80 | SRIC_SYSCMD_ADDR_ASSIGN;
+	sric_if.txbuf[SRIC_DATA+1] = addr;
+
+	sric_if.tx_lock();
+	sric_if.tx_cmd_start( sric_if.txbuf[SRIC_LEN] + SRIC_HEADER_SIZE );
 }
 
 /* Send ADVANCE_TOKEN command on the SRIC bus */
