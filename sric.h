@@ -92,6 +92,14 @@ extern uint8_t sric_addr;
 /* Description of this interface */
 extern const sric_if_t sric_if;
 
+/* System command constants */
+enum {
+	SRIC_SYSCMD_RESET,
+	SRIC_SYSCMD_TOK_ADVANCE,
+	SRIC_SYSCMD_ADDR_ASSIGN,
+	SRIC_SYSCMD_ADDR_INFO,
+};
+
 /* Initialise the internal goo */
 void sric_init( void );
 
