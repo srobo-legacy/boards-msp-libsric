@@ -117,7 +117,16 @@ static void send_address( uint8_t addr )
 /* Send ADVANCE_TOKEN command on the SRIC bus */
 static void send_tok_advance( uint8_t addr )
 {
-	/* TODO: Populate SRIC frame with ADVANCE_TOKEN and transmit it */
+	sric_if.tx_lock();
+
+	sric_if.txbuf[0] = 0x7e;
+	sric_if.txbuf[SRIC_DEST] = addr;
+	sric_if.txbuf[SRIC_SRC] = sric_addr;
+	sric_if.txbuf[SRIC_LEN] = 1;
+	sric_if.txbuf[SRIC_DATA] = 0x80 | SRIC_SYSCMD_TOK_ADVANCE;
+
+	sric_if.tx_lock();
+	sric_if.tx_cmd_start( sric_if.txbuf[SRIC_LEN] + SRIC_HEADER_SIZE, true );
 }
 
 static sched_task_t gw_task;
