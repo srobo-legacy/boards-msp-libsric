@@ -95,7 +95,7 @@ static void send_reset( void )
 	sric_if.txbuf[SRIC_DATA] = 0x80 | SRIC_SYSCMD_RESET;
 
 	sric_if.tx_lock();
-	sric_if.tx_cmd_start( sric_if.txbuf[SRIC_LEN] + SRIC_HEADER_SIZE );
+	sric_if.tx_cmd_start( sric_if.txbuf[SRIC_LEN] + SRIC_HEADER_SIZE, false );
 }
 
 /* Send ADDRESS_ASSIGN command on the SRIC bus */
@@ -111,7 +111,7 @@ static void send_address( uint8_t addr )
 	sric_if.txbuf[SRIC_DATA+1] = addr;
 
 	sric_if.tx_lock();
-	sric_if.tx_cmd_start( sric_if.txbuf[SRIC_LEN] + SRIC_HEADER_SIZE );
+	sric_if.tx_cmd_start( sric_if.txbuf[SRIC_LEN] + SRIC_HEADER_SIZE, true );
 }
 
 /* Send ADVANCE_TOKEN command on the SRIC bus */
@@ -229,7 +229,10 @@ static void gw_fsm( gw_event_t event )
 			hostser_rx_done();
 
 			sric_if.tx_lock();
-			sric_if.tx_cmd_start(hostser_rxbuf[SRIC_LEN] + SRIC_HEADER_SIZE);
+			sric_if.tx_cmd_start( hostser_rxbuf[SRIC_LEN] + SRIC_HEADER_SIZE,
+					      /* Expect responses to everything except broadcasts */
+					      sric_txbuf[SRIC_DEST] != 0 );
+
 			gw_state = S_SRIC_TX_CMD;
 		}
 		else if( event == EV_SRIC_RX ) {

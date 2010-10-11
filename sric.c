@@ -22,6 +22,7 @@
 /* One additional byte for the 0x7e for correct stop bit receivage */
 uint8_t sric_txbuf[SRIC_TXBUF_SIZE+1];
 uint8_t sric_txlen;
+static bool expect_resp;
 
 /* Number of token loops to retransmit after */
 #define TOKEN_THRESHOLD 3
@@ -81,7 +82,7 @@ static volatile enum {
 } state;
 
 static void sric_tx_lock( void );
-static void sric_tx_start( uint8_t len );
+static void sric_tx_start( uint8_t len, bool expect_resp );
 static void use_token( bool use );
 static void sric_ctl( sric_ctl_t c );
 
@@ -249,10 +250,17 @@ static void fsm( event_t ev )
 			if( sric_use_token )
 				sric_conf.token_drv->release();
 
-			if ( sric_txbuf[SRIC_DEST] == 0 ) {
-				/* Broadcast has no response */
-				if( sric_conf.rx_resp != NULL )
+			if ( !expect_resp ) {
+				/* No response expected */
+				uint8_t i;
+
+				if( sric_conf.rx_resp != NULL ) {
+					/* Clear the rxbuf to ensure our "user" doesn't get confused... */
+					for( i=0; i<SRIC_RXBUF_SIZE; i++ )
+						sric_rxbuf[i] = 0;
+
 					sric_conf.rx_resp( &sric_if );
+				}
 
 				state = S_IDLE;
 
@@ -454,9 +462,11 @@ static void sric_tx_lock( void )
 		fsm(EV_TX_LOCK);
 }
 
-static void sric_tx_start( uint8_t len )
+static void sric_tx_start( uint8_t len, bool _expect_resp )
 {
 	sric_txlen = len;
+	expect_resp = _expect_resp;
+
 	fsm(EV_TX_START);
 }
 

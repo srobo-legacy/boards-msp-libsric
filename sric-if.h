@@ -26,8 +26,11 @@ typedef struct {
 
 	/* Function to transmit the contents of the buffer
 	   len is the number of bytes in the buffer up to the end of the data field
-	   (the interface will manage checksumming) */
-	void (*tx_cmd_start) ( uint8_t len );
+	   (the interface will manage checksumming).
+
+	   expect_resp is true if a response is to be expected.
+	   (most useful for labelling broadcasts as expecting no response) */
+	void (*tx_cmd_start) ( uint8_t len, bool expect_resp );
 
 	/* Start transmitting a response frame
 	   Must only be called when the rx_cmd callback has returned
