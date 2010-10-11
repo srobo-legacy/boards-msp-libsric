@@ -4,6 +4,21 @@
 #include "sric-if.h"
 #include "sric.h"
 
+/* Classes of boards */
+typedef enum {
+	SRIC_CLASS_PCSRIC,
+	SRIC_CLASS_POWERBOARD,
+	SRIC_CLASS_MOTOR,
+	SRIC_CLASS_JOINTIO,
+	SRIC_CLASS_PWM,
+} sric_class_t;
+
+typedef struct {
+	sric_class_t devclass;
+} sric_client_conf_t;
+
+extern const sric_client_conf_t sric_client_conf;
+
 typedef struct {
 	/* Function to call when a command is received.
 	   Find the received command in iface->rxbuf.
