@@ -22,4 +22,7 @@ void sric_gw_sric_rxresp( const sric_if_t *iface );
 /* Called when sric interface experiences an error (timeout) */
 void sric_gw_sric_err( void );
 
+/* Enumerate the bus etc */
+void sric_gw_init_bus( void );
+
 #endif	/* __GW_H */

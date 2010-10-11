@@ -298,3 +298,8 @@ static bool gw_timeout_cb( void *udata )
 	gw_fsm ( EV_TIMEOUT );
 	return false;
 }
+
+void sric_gw_init_bus( void )
+{
+	gw_fsm( EV_SRIC_INIT );
+}
