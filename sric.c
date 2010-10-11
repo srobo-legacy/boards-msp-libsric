@@ -364,7 +364,8 @@ static void fsm( event_t ev )
 		if(ev == EV_TX_DONE ) {
 			lvds_tx_dis();
 			sric_conf.usart_rx_gate(sric_conf.usart_n, true);
-			sric_conf.token_drv->release();
+			if( sric_use_token )
+				sric_conf.token_drv->release();
 
 			proc_queued_reset();
 			state = S_IDLE;
