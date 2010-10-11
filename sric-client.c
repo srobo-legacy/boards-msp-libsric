@@ -81,9 +81,8 @@ uint8_t sric_client_rx( const sric_if_t *iface )
 		uint8_t sys = syscmd_num(cmd);
 
 		if ( len > 0 && sys < NUM_SYSCMDS )
-			invoke( syscmds + sys, iface );
+			return invoke( syscmds + sys, iface );
 
-		/* There's always no response to broadcasts */
 		return SRIC_IGNORE;
 	}
 
@@ -111,23 +110,44 @@ uint8_t sric_client_rx( const sric_if_t *iface )
 /* Reset the device, move into enumeration mode */
 static uint8_t syscmd_reset( const sric_if_t *iface )
 {
-	return 0;
+	/* Reset the SRIC device -- entering enumeration mode */
+	iface->ctl( SRIC_CTL_RESET );
+
+	return SRIC_IGNORE;
 }
 
 /* Advance the token */
 static uint8_t syscmd_enum_tok_advance( const sric_if_t *iface )
 {
+	/* Release it */
+	iface->ctl( SRIC_CTL_RELEASE_TOK );
+
+	/* Start using the token */
+	iface->use_token(true);
+
+	/* Respond with ACK */
 	return 0;
 }
 
 /* Receive a new address from the director, and reply with info */
 static uint8_t syscmd_addr_assign( const sric_if_t *iface )
 {
-	return 0;
+	/* Check that we have the token */
+	if( sric_conf.token_drv->have_token() ) {
+		sric_addr = iface->rxbuf[SRIC_DATA + 1];
+
+		/* Transmit device info */
+		return syscmd_addr_info(iface);
+	}
+
+	/* Not for us */
+	return SRIC_IGNORE;
 }
 
 /* Send reply containing info */
 static uint8_t syscmd_addr_info( const sric_if_t *iface )
 {
-	return 0;
+	iface->txbuf[SRIC_DATA] = sric_client_conf.devclass;
+
+	return 1;
 }
