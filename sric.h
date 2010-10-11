@@ -85,6 +85,8 @@ typedef struct {
 	void (*error) (void);
 } sric_conf_t;
 
+extern const sric_conf_t sric_conf;
+
 /* Our SRIC address */
 /* 0 means we haven't had one assigned yet */
 extern uint8_t sric_addr;
