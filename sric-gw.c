@@ -187,11 +187,7 @@ static void gw_fsm( gw_event_t event )
 
 	case S_SEND_ADDRESS:
 		if ( event == EV_SRIC_RX ) {
-			/* TODO: Tell the host about the situation */
-			/* TODO: gw_state = S_WAIT_INFO_TO_HOST; */
-
-			/* TODO: Move to S_WAIT_INFO_TO_HOST */
-			/* For the moment, register a timeout so that we can escape the sric state machine */
+			/* Register a timeout so that we can escape the sric state machine */
 			gw_register_timeout();
 
 		} else if( event == EV_TIMEOUT ) {
@@ -216,7 +212,6 @@ static void gw_fsm( gw_event_t event )
 		if( event == EV_TIMEOUT ) {
 			if( sric_conf.token_drv->have_token() ) {
 				/* We've finished enumerating the bus */
-				/* TODO: Tell the host we're done */
 				sric_if.ctl( SRIC_CTL_RELEASE_TOK );
 				sric_if.use_token(true);
 				gw_state = S_IDLE;
