@@ -5,6 +5,17 @@
 #include "sric.h"
 #include "hostser.h"
 
+typedef enum {
+	/* Set whether the SRIC interface uses the token */
+	GW_CMD_USE_TOKEN,
+	/* Request the token (only use in tokenless mode) */
+	GW_CMD_REQ_TOKEN,
+	/* Query the token driver to determine if SRIC IF currently has the token */
+	GW_CMD_HAVE_TOKEN,
+	/* Generate the token */
+	GW_CMD_GEN_TOKEN,
+} gw_cmd_t;
+
 void sric_gw_init( void );
 
 /* Call when frame available on the host side */

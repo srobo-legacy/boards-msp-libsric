@@ -51,22 +51,83 @@ void sric_gw_init( void )
 {
 }
 
+static bool gw_fwd_to_sric()
+{
+	/* Transmit frame on SRIC */
+	memcpy( sric_txbuf, hostser_rxbuf, hostser_rxbuf[SRIC_LEN] + SRIC_HEADER_SIZE );
+	hostser_rx_done();
+
+	sric_if.tx_lock();
+	sric_if.tx_cmd_start( hostser_rxbuf[SRIC_LEN] + SRIC_HEADER_SIZE,
+			      /* Avoid SRIC IF rotating by not expecting a response */
+			      false );
+	return true;
+}
+
+#define require_len(x) do { if( hostser_rxbuf[SRIC_LEN] != x ) return false; } while(0)
+
+static bool gw_proc_host_cmd()
+{
+	uint8_t len = hostser_rxbuf[SRIC_LEN];
+	uint8_t *data = hostser_rxbuf + SRIC_DATA;
+
+	if( len == 0 )
+		return false;
+
+	if( gw_insric_state != IS_IDLE )
+		/* Ignore when we can't transmit a response */
+		return false;
+
+	hostser_txbuf[0] = 0x8e;
+	hostser_txbuf[SRIC_LEN] = 0;
+
+	switch( data[0] )
+	{
+	case GW_CMD_USE_TOKEN:
+		require_len(2);
+		sric_if.use_token( data[1] ? true : false );
+		break;
+
+	case GW_CMD_REQ_TOKEN:
+		require_len(1);
+		sric_if.ctl( SRIC_CTL_REQUEST_TOK );
+		break;
+
+	case GW_CMD_HAVE_TOKEN:
+		require_len(1);
+		hostser_txbuf[SRIC_LEN] = 1;
+		hostser_txbuf[SRIC_DATA] = sric_conf.token_drv->have_token();
+		break;
+
+#if SRIC_DIRECTOR
+	case GW_CMD_GEN_TOKEN:
+		require_len(1);
+		token_dir_emit_first();
+		break;
+#endif
+	}
+
+	/* Yes, modifying the state is naughty, but fun... */
+	gw_insric_state = IS_TRANSMITTING;
+	hostser_tx();
+	return false;
+}
+
 /* Manages data coming in from the host */
 static void gw_inhost_fsm( gw_event_t event )
 {
 	switch( gw_inhost_state ) {
 	case IH_IDLE:
 		if( event == EV_HOST_RX ) {
-			/* Transmit frame on SRIC */
-			memcpy( sric_txbuf, hostser_rxbuf, hostser_rxbuf[SRIC_LEN] + SRIC_HEADER_SIZE );
-			hostser_rx_done();
+			bool (*f)(void) = NULL;
 
-			sric_if.tx_lock();
-			sric_if.tx_cmd_start( hostser_rxbuf[SRIC_LEN] + SRIC_HEADER_SIZE,
-					      /* Avoid SRIC IF rotating by not expecting a response */
-					      false );
+			if( hostser_rxbuf[0] == 0x7e )
+				f = gw_fwd_to_sric;
+			else if( hostser_rxbuf[0] == 0x8e )
+				f = gw_proc_host_cmd;
 
-			gw_inhost_state = IH_TRANSMITTING;
+			if( f != NULL && f() )
+				gw_inhost_state = IH_TRANSMITTING;
 		}
 		break;
 
