@@ -83,6 +83,11 @@ typedef struct {
 	/* Error: Called when a timeout occurs
 	   The interface resets itself when this happens. */
 	void (*error) (void);
+
+#if SRIC_PROMISC
+	/* Called when a frame is received -- regardless of cmd or response */
+	void (*promisc_rx) ( const sric_if_t *iface );
+#endif
 } sric_conf_t;
 
 extern const sric_conf_t sric_conf;

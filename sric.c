@@ -450,9 +450,15 @@ void sric_rx_cb( uint8_t b )
 	recv_crc = sric_rxbuf[ rxbuf_pos-2 ];
 	recv_crc |= sric_rxbuf[ rxbuf_pos-1 ] << 8;
 
-	if( crc == recv_crc )
+	if( crc == recv_crc ) {
 		/* We have a valid frame :-O */
+
+#if SRIC_PROMISC
+		/* Alert people to the frame before its butchered */
+		sric_conf.promisc_rx(&sric_if);
+#endif
 		fsm( EV_RX );
+	}
 
 	rxbuf_pos = 0;
 }
