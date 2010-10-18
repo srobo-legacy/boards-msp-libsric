@@ -10,6 +10,9 @@ typedef enum {
 
 	/* Release the token (for use in enumeration mode) */
 	SRIC_CTL_RELEASE_TOK = (1<<1),
+
+	/* Request the token */
+	SRIC_CTL_REQUEST_TOK = (1<<2),
 } sric_ctl_t;
 
 /* Struct describing a SRIC interface */

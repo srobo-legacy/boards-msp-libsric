@@ -498,5 +498,9 @@ static void sric_ctl ( sric_ctl_t c )
 	case SRIC_CTL_RELEASE_TOK:
 		sric_conf.token_drv->release();
 		break;
+
+	case SRIC_CTL_REQUEST_TOK:
+		sric_conf.token_drv->req();
+		break;
 	}
 }
