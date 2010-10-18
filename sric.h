@@ -77,7 +77,7 @@ typedef struct {
 
 	/* Received a response frame
 	   Only called if not NULL.
-	   Called upon transmission completion when broadcasting. */
+	   Called upon transmission completion when expect_resp is false. */
 	void (*rx_resp) ( const sric_if_t *iface );
 
 	/* Error: Called when a timeout occurs
