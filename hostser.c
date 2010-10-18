@@ -91,13 +91,15 @@ bool hostser_tx_cb( uint8_t *b )
 	return true;
 }
 
+#define is_delim(x) ( (x == 0x7e) || (x == 0x8e) )
+
 void hostser_rx_cb( uint8_t b )
 {
 	static bool escape_next = false;
 	uint8_t len;
 	uint16_t crc, recv_crc;
 
-	if( b == 0x7E ) {
+	if( is_delim(b) ) {
 		escape_next = false;
 		rxbuf_pos = 0;
 	} else if( b == 0x7D ) {
@@ -115,7 +117,7 @@ void hostser_rx_cb( uint8_t b )
 	hostser_rxbuf[rxbuf_pos] = b;
 	rxbuf_pos += 1;
 
-	if( hostser_rxbuf[0] != 0x7e
+	if( !is_delim( hostser_rxbuf[0] )
 	    /* Make sure we've reached the minimum frame size */
 	    || rxbuf_pos < (SRIC_LEN + 2) )
 		return;
