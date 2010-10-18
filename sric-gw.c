@@ -17,7 +17,6 @@
 #include <string.h>
 
 #if SRIC_DIRECTOR
-#include <drivers/sched.h>
 #include "token-dir.h"
 #endif
 
@@ -33,43 +32,30 @@ typedef enum {
 	EV_SRIC_TX_COMPLETE,
 	/* SRIC interface experienced an error */
 	EV_SRIC_ERROR,
-	/* Start bus initialisation */
-	EV_SRIC_INIT,
-	/* Timeout */
-	EV_TIMEOUT,
 } gw_event_t;
 
-/* State machine states */
 typedef enum {
-	/* Idle */
-	S_IDLE,
-	/* Transmitting the command the host sent us over sric */
-	S_SRIC_TX_CMD,
-	/* Transmitting the sric response to the host */
-	S_HOST_TX_RESP,
-} state_t;
+	IH_IDLE,
+	IH_TRANSMITTING,
+} inhost_state_t;
 
-static void gw_fsm( gw_event_t event );
+typedef enum {
+	IS_IDLE,
+	IS_TRANSMITTING,
+} insric_state_t;
 
-static bool gw_timeout_handler( void *ud )
-{
-	gw_fsm( EV_TIMEOUT );
-	return false;
-}
-
-static state_t gw_state;
+static inhost_state_t gw_inhost_state;
+static insric_state_t gw_insric_state;
 
 void sric_gw_init( void )
 {
-	gw_state = S_IDLE;
 }
 
-/* State machine for this gateway */
-static void gw_fsm( gw_event_t event )
+/* Manages data coming in from the host */
+static void gw_inhost_fsm( gw_event_t event )
 {
-	switch( gw_state ) {
-	case S_IDLE:
-		/* Idling away, plotting our revenge */
+	switch( gw_inhost_state ) {
+	case IH_IDLE:
 		if( event == EV_HOST_RX ) {
 			/* Transmit frame on SRIC */
 			memcpy( sric_txbuf, hostser_rxbuf, hostser_rxbuf[SRIC_LEN] + SRIC_HEADER_SIZE );
@@ -77,79 +63,57 @@ static void gw_fsm( gw_event_t event )
 
 			sric_if.tx_lock();
 			sric_if.tx_cmd_start( hostser_rxbuf[SRIC_LEN] + SRIC_HEADER_SIZE,
-					      /* Expect responses to everything except broadcasts */
-					      sric_txbuf[SRIC_DEST] != 0 );
+					      /* Avoid SRIC IF rotating by not expecting a response */
+					      false );
 
-			gw_state = S_SRIC_TX_CMD;
-		}
-		else if( event == EV_SRIC_RX ) {
-			/* TODO -- Process commands from SRIC side */
+			gw_inhost_state = IH_TRANSMITTING;
 		}
 		break;
 
-	case S_SRIC_TX_CMD:
-		/* Waiting for the SRIC client to get back to us */
+	case IH_TRANSMITTING:
+		if( event == EV_SRIC_TX_COMPLETE )
+			gw_inhost_state = IH_IDLE;
+		break;
+	}
+}
+
+/* Manages data coming in from the sric bus */
+static void gw_insric_fsm( gw_event_t event )
+{
+	switch( gw_insric_state ) {
+	case IS_IDLE:
 		if( event == EV_SRIC_RX ) {
-			/* Response received on SRIC */
-			/* Transmit it to the host */
+			/* Transmit the frame to the host */
 			memcpy( hostser_txbuf, sric_rxbuf, sric_rxbuf[SRIC_LEN] + SRIC_HEADER_SIZE );
 
 			hostser_tx();
-			gw_state = S_HOST_TX_RESP;
-		} else if( event == EV_SRIC_ERROR ) {
-			/* SRIC interface has given up waiting for the slave */
-			/* TODO: Perhaps notify the host of the error */
-			gw_state = S_IDLE;
-		}
 
-	case S_HOST_TX_RESP:
-		/* Transmitting the SRIC response  */
-		if( event == EV_HOST_TX_COMPLETE ) {
-			/* We're done with everything */
-			hostser_rx_done();
-			gw_state = S_IDLE;
+			gw_insric_state = IS_TRANSMITTING;
 		}
-
-	default:
+		break;
+	case IS_TRANSMITTING:
+		if( event == EV_HOST_TX_COMPLETE )
+			gw_insric_state = IS_IDLE;
 		break;
 	}
 }
 
 void sric_gw_hostser_rx( void )
 {
-	gw_fsm( EV_HOST_RX );
+	gw_inhost_fsm( EV_HOST_RX );
 }
 
 void sric_gw_hostser_tx_done( void )
 {
-	gw_fsm( EV_HOST_TX_COMPLETE );
+	gw_insric_fsm( EV_HOST_TX_COMPLETE );
 }
 
-uint8_t sric_gw_sric_rxcmd( const sric_if_t *iface )
+void sric_gw_sric_promisc_rx( const sric_if_t *iface )
 {
-	gw_fsm( EV_SRIC_RX );
-
-	/* We'll provide our response later */
-	return SRIC_RESPONSE_DEFER;
+	gw_insric_fsm( EV_SRIC_RX );
 }
 
-void sric_gw_sric_rxresp( const sric_if_t *iface )
+void sric_gw_sric_rx_resp( const sric_if_t *iface )
 {
-	gw_fsm( EV_SRIC_RX );
-}
-
-void sric_gw_sric_err( void )
-{
-	gw_fsm( EV_SRIC_ERROR );
-}
-
-static bool gw_timeout_cb( void *udata )
-{
-	gw_fsm ( EV_TIMEOUT );
-	return false;
-}
-
-void sric_gw_init_bus( void )
-{
-	gw_fsm( EV_SRIC_INIT );
+	gw_inhost_fsm( EV_SRIC_TX_COMPLETE );
 }

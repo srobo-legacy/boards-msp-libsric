@@ -13,16 +13,10 @@ void sric_gw_hostser_rx( void );
 /* Called when host-side transmission has completed */
 void sric_gw_hostser_tx_done( void );
 
-/* Called with incoming sric command frames */
-uint8_t sric_gw_sric_rxcmd( const sric_if_t *iface );
+/* SRIC promiscuous handler */
+void sric_gw_sric_promisc_rx( const sric_if_t *iface );
 
-/* Called with incoming sric response frames */
-void sric_gw_sric_rxresp( const sric_if_t *iface );
-
-/* Called when sric interface experiences an error (timeout) */
-void sric_gw_sric_err( void );
-
-/* Enumerate the bus etc */
-void sric_gw_init_bus( void );
+/* Notifier for transmission completion */
+void sric_gw_sric_rx_resp( const sric_if_t *iface );
 
 #endif	/* __GW_H */
