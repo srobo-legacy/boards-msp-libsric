@@ -33,6 +33,8 @@ uint8_t hostser_rxbuf[HOSTSER_BUF_SIZE];
 /* Where the next byte needs to go */
 static uint8_t rxbuf_pos = 0;
 
+static bool rxed_frame = false;
+
 /* Set crc in transmit buffer */
 static void tx_set_crc( void );
 
@@ -108,9 +110,12 @@ void hostser_rx_cb( uint8_t b )
 	recv_crc = hostser_rxbuf[ rxbuf_pos-2 ];
 	recv_crc |= hostser_rxbuf[ rxbuf_pos-1 ] << 8;
 
-	if( crc == recv_crc )
+	if( crc == recv_crc ) {
 		/* We have a valid frame :-O */
-		fsm( EV_RX_FRAME_RECEIVED );
+		rxed_frame = true;
+		if( hostser_conf.rx_cb != NULL )
+			hostser_conf.rx_cb();
+	}
 		
 	rxbuf_pos = 0;
 }
@@ -176,7 +181,7 @@ static void tx_set_crc( void )
 
 void hostser_rx_done( void )
 {
-	fsm( EV_RX_DONE );
+	rxed_frame = false;
 }
 
 bool hostser_tx_busy( void )
