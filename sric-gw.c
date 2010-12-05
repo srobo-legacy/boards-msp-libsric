@@ -79,6 +79,10 @@ static bool gw_proc_host_cmd()
 		return false;
 
 	hostser_txbuf[0] = 0x8e;
+	hostser_txbuf[SRIC_DEST] = 1 | 0x80; /* Destination is bus director */
+					/* Additionally, this is an ack */
+	hostser_txbuf[SRIC_SRC] = 0;	/* XXX - what's an appropriate addr
+					 * for the gateway to send msgs from? */
 	hostser_txbuf[SRIC_LEN] = 0;
 
 	switch( data[0] )
