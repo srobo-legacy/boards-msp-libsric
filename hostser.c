@@ -24,7 +24,7 @@ extern const hostser_conf_t hostser_conf;
 /*** Transmit buffer ***/
 static uint8_t txbuf[2][HOSTSER_BUF_SIZE];
 static uint8_t txbuf_idx = 0;
-uint8_t *hostser_txbuf = &txbuf[0][0];
+uint8_t *hostser_txbuf = &txbuf[1][0];
 uint8_t hostser_txlen = 0;
 
 /* Offset of next byte to be transmitted from the tx buffer */
@@ -54,7 +54,6 @@ bool hostser_tx_cb( uint8_t *b )
 	if( txbuf_pos == hostser_txlen ) {
 		/* Transmission complete */
 		txing_frame = false;
-		txbuf_idx = (txbuf_idx + 1) & 1;
 
 		if( hostser_conf.tx_done_cb != NULL )
 			hostser_conf.tx_done_cb();
@@ -62,7 +61,7 @@ bool hostser_tx_cb( uint8_t *b )
 		return false;
 	}
 
-	*b = hostser_txbuf[txbuf_pos];
+	*b = txbuf[txbuf_idx][txbuf_pos];
 
 	if( escape_next ) {
 		*b ^= 0x20;
@@ -174,7 +173,10 @@ void hostser_tx( void )
 	txing_frame = true;
 
 	/* Change outside view of where tx buffer is */
+	/* Point outside world to old buffer */
 	hostser_txbuf = &txbuf[txbuf_idx][0];
+	/* flip txbuf to point at last filled buffer */
+	txbuf_idx = (txbuf_idx + 1) & 1;
 
 	/* Actually begin transmission */
 	hostser_conf.usart_tx_start( hostser_conf.usart_tx_start_n );
