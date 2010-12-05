@@ -50,6 +50,9 @@ void sric_client_init( void )
 static uint8_t invoke( const sric_cmd_t *cmd, const sric_if_t *iface )
 {
 	uint8_t len = cmd->cmd( iface );
+	if (len >= SRIC_SPECIAL_RET_LIMIT)
+		return len;
+
 	uint8_t const *rxbuf = iface->rxbuf;
 
 	iface->txbuf[0] = 0x7e;

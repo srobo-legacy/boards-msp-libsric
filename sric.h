@@ -42,6 +42,9 @@ enum {
 #define SRIC_RESPONSE_DEFER 255
 /* Do not respond to this command */
 #define SRIC_IGNORE 254
+/* Smallest special return - used to identify when we've received a special
+ * response and need to pass it back up the call chain */
+#define SRIC_SPECIAL_RET_LIMIT SRIC_IGNORE
 
 /* SRIC configuration
    There must be a const instance of this called sric_conf somewhere. */
