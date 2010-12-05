@@ -33,32 +33,8 @@ uint8_t hostser_rxbuf[HOSTSER_BUF_SIZE];
 /* Where the next byte needs to go */
 static uint8_t rxbuf_pos = 0;
 
-/* Events that the state machine responds to */
-typedef enum {
-	/* A frame has been received */
-	EV_RX_FRAME_RECEIVED,
-	/* The 'user' has finished with the received frame */
-	EV_RX_DONE,
-	/* A frame has been queued for transmission */
-	EV_TX_QUEUED,
-	/* Frame has finished being transmitted */
-	EV_TX_DONE,
-} hs_event_t;
-
-/* State machine that manages the host interface */
-static void fsm( hs_event_t flag );
-
 /* Set crc in transmit buffer */
 static void tx_set_crc( void );
-
-static volatile enum {
-	/* Nothing's happening */
-	HS_IDLE,
-	/* A frame has been received and is being processed by the user */
-	HS_FRAME_RECEIVED,
-	/* A frame is currently transmitting */
-	HS_TXING,
-} hostser_state = HS_IDLE;
 
 void hostser_init( void )
 {
@@ -139,6 +115,7 @@ void hostser_rx_cb( uint8_t b )
 	rxbuf_pos = 0;
 }
 
+#if 0
 static void fsm( hs_event_t event )
 {
 	switch( hostser_state )	{
@@ -186,6 +163,7 @@ static void fsm( hs_event_t event )
 		break;
 	}
 }
+#endif
 
 static void tx_set_crc( void )
 {
