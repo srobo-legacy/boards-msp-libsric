@@ -9,11 +9,11 @@
 #define HOSTSER_BUF_SIZE SRIC_TXBUF_SIZE
 /* Transmit buffer
    All bytes except the first are escaped as they leave. */
-extern uint8_t hostser_txbuf[];
+extern uint8_t *hostser_txbuf;
 /* Number of bytes in the transmit buffer */
 extern uint8_t hostser_txlen;
 /* Receive buffer */
-extern uint8_t hostser_rxbuf[];
+extern uint8_t *hostser_rxbuf;
 
 /* An instance of this struct must be linked in, and named
    hostser_conf.  Should be const. */

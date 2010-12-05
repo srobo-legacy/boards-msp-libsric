@@ -22,14 +22,18 @@
 extern const hostser_conf_t hostser_conf;
 
 /*** Transmit buffer ***/
-uint8_t hostser_txbuf[HOSTSER_BUF_SIZE];
+static uint8_t txbuf[2][HOSTSER_BUF_SIZE];
+static uint8_t txbuf_idx = 0;
+uint8_t *hostser_txbuf = &txbuf[0][0];
 uint8_t hostser_txlen = 0;
 
 /* Offset of next byte to be transmitted from the tx buffer */
 static uint8_t txbuf_pos = 0;
 
 /**** Receive buffer ****/
-uint8_t hostser_rxbuf[HOSTSER_BUF_SIZE];
+static uint8_t rxbuf[2][HOSTSER_BUF_SIZE];
+static uint8_t rxbuf_idx = 0;
+uint8_t *hostser_rxbuf = &rxbuf[0][0];
 /* Where the next byte needs to go */
 static uint8_t rxbuf_pos = 0;
 
@@ -50,8 +54,11 @@ bool hostser_tx_cb( uint8_t *b )
 	if( txbuf_pos == hostser_txlen ) {
 		/* Transmission complete */
 		txing_frame = false;
+		txbuf_idx = (txbuf_idx + 1) & 1;
+
 		if( hostser_conf.tx_done_cb != NULL )
 			hostser_conf.tx_done_cb();
+
 		return false;
 	}
 
@@ -121,6 +128,9 @@ void hostser_rx_cb( uint8_t b )
 	}
 		
 	rxbuf_pos = 0;
+	/* XXX - this is wrong. But not importantly wrong right now */
+	rxbuf_idx = (rxbuf_idx + 1) & 1;
+	hostser_rxbuf = &rxbuf[rxbuf_idx][0];
 }
 
 static void tx_set_crc( void )
@@ -153,6 +163,11 @@ void hostser_tx( void )
 	hostser_txlen = SRIC_OVERHEAD + hostser_txbuf[ SRIC_LEN ];
 
 	txbuf_pos = 0;
-	hostser_conf.usart_tx_start( hostser_conf.usart_tx_start_n );
 	txing_frame = true;
+
+	/* Change outside view of where tx buffer is */
+	hostser_txbuf = &txbuf[txbuf_idx][0];
+
+	/* Actually begin transmission */
+	hostser_conf.usart_tx_start( hostser_conf.usart_tx_start_n );
 }
