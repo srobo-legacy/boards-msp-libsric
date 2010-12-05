@@ -123,56 +123,6 @@ void hostser_rx_cb( uint8_t b )
 	rxbuf_pos = 0;
 }
 
-#if 0
-static void fsm( hs_event_t event )
-{
-	switch( hostser_state )	{
-	case HS_IDLE:
-		/* Nothing's currently happening */
-
-		if( event == EV_RX_FRAME_RECEIVED ) {
-			/* Received a frame, wait for someone to do something with it */
-			hostser_state = HS_FRAME_RECEIVED;
-
-			if( hostser_conf.rx_cb != NULL )
-				hostser_conf.rx_cb();
-
-		} else if( event == EV_TX_QUEUED ) {
-			txbuf_pos = 0;
-			hostser_conf.usart_tx_start( hostser_conf.usart_tx_start_n );
-
-			hostser_state = HS_TXING;
-		}
-
-		break;
-
-	case HS_FRAME_RECEIVED:
-		/* A frame has been received */
-		/* Stay in this state until we can throw it away.  */
-
-		if( event == EV_RX_DONE )
-			hostser_state = HS_IDLE;
-
-		break;
-
-	case HS_TXING:
-		/* A frame is currently transmitting */
-		/* Waiting for that operation to complete */
-
-		if( event == EV_TX_DONE ) {
-			hostser_state = HS_IDLE;
-
-			if( hostser_conf.tx_done_cb != NULL )
-				hostser_conf.tx_done_cb();
-		}
-		break;
-
-	default:
-		break;
-	}
-}
-#endif
-
 static void tx_set_crc( void )
 {
 	uint8_t len = hostser_txbuf[SRIC_LEN];
