@@ -18,6 +18,32 @@
 #include <io.h>
 #include <sys/cdefs.h>
 
+typedef enum {
+	HS_RX_IDLE,		/* Idle or receiving frame in 1 buffer */
+	HS_RX_HAVE_FRAME,	/* Frame in 1 buffer, maybe receiving into 2nd*/
+	HS_RX_FULL		/* Both buffers are full */
+} hs_rx_state_t;
+
+typedef enum {
+	HS_TX_IDLE,		/* Nothing happening, capt'n */
+	HS_TX_SENDING,		/* Transmitting data from one buffer */
+	HS_TX_FULL		/* Tranmitting from one, other buffer full */
+				/* XXX - is this a state that should be
+				 * permitted? We should block other code from
+				 * modifying the transmit buffer in this state,
+				 * but there's no mechanism for doing that */
+} hs_tx_state_t;
+
+typedef enum {
+	EV_RX_RXED_FRAME,
+	EV_RX_HANDLED_FRAME
+} hs_rx_event_t;
+
+typedef enum {
+	EV_TX_TXMIT_DONE,
+	EV_TX_QUEUED
+} hs_tx_event_t;
+
 /* Linked in elsewhere */
 extern const hostser_conf_t hostser_conf;
 
