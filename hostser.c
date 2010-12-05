@@ -34,6 +34,7 @@ uint8_t hostser_rxbuf[HOSTSER_BUF_SIZE];
 static uint8_t rxbuf_pos = 0;
 
 static bool rxed_frame = false;
+static bool txing_frame = false;
 
 /* Set crc in transmit buffer */
 static void tx_set_crc( void );
@@ -48,7 +49,9 @@ bool hostser_tx_cb( uint8_t *b )
 
 	if( txbuf_pos == hostser_txlen ) {
 		/* Transmission complete */
-		fsm( EV_TX_DONE );
+		txing_frame = false;
+		if( hostser_conf.tx_done_cb != NULL )
+			hostser_conf.tx_done_cb();
 		return false;
 	}
 
@@ -186,7 +189,7 @@ void hostser_rx_done( void )
 
 bool hostser_tx_busy( void )
 {
-	return hostser_state != HS_IDLE;
+	return txing_frame;
 }
 
 void hostser_tx( void )
@@ -199,5 +202,7 @@ void hostser_tx( void )
 	tx_set_crc();
 	hostser_txlen = SRIC_OVERHEAD + hostser_txbuf[ SRIC_LEN ];
 
-	fsm( EV_TX_QUEUED );
+	txbuf_pos = 0;
+	hostser_conf.usart_tx_start( hostser_conf.usart_tx_start_n );
+	txing_frame = true;
 }
