@@ -111,6 +111,8 @@ static bool gw_proc_host_cmd()
 #endif
 	}
 
+	hostser_rx_done();
+
 	/* Yes, modifying the state is naughty, but fun... */
 	gw_insric_state = IS_TRANSMITTING;
 	hostser_tx();
