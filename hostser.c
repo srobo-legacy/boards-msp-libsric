@@ -102,25 +102,34 @@ void hostser_rx_cb( uint8_t b )
 	if( rxbuf_pos >= HOSTSER_BUF_SIZE )
 		return;
 
-	hostser_rxbuf[rxbuf_pos] = b;
+	rxbuf[rxbuf_idx][rxbuf_pos] = b;
 	rxbuf_pos += 1;
 
-	if( !is_delim( hostser_rxbuf[0] )
+	if( !is_delim( rxbuf[rxbuf_idx][0] )
 	    /* Make sure we've reached the minimum frame size */
 	    || rxbuf_pos < (SRIC_LEN + 2) )
 		return;
 
-	len = hostser_rxbuf[SRIC_LEN];
+	len = rxbuf[rxbuf_idx][SRIC_LEN];
 	if( len != rxbuf_pos - (SRIC_LEN + 3) )
 		return;
 
 	/* Everything gets hashed */
-	crc = crc16( hostser_rxbuf, rxbuf_pos - 2 );
+	crc = crc16( rxbuf[rxbuf_idx], rxbuf_pos - 2 );
 
-	recv_crc = hostser_rxbuf[ rxbuf_pos-2 ];
-	recv_crc |= hostser_rxbuf[ rxbuf_pos-1 ] << 8;
+	recv_crc = rxbuf[rxbuf_idx][ rxbuf_pos-2 ];
+	recv_crc |= rxbuf[rxbuf_idx][ rxbuf_pos-1 ] << 8;
 
 	if( crc == recv_crc ) {
+
+		/* Swap buffers over - have to do this before callback because
+		 * it'll call hostser_rx_done. In a situation where the cb
+		 * didn't occur in interrupt context, this wouldn't have to
+		 * happen: comming soon! */
+
+		/* Receive into the /other/ buffer */
+		rxbuf_idx = (rxbuf_idx + 1) & 1;
+
 		/* We have a valid frame :-O */
 		rxed_frame = true;
 		if( hostser_conf.rx_cb != NULL )
@@ -128,9 +137,6 @@ void hostser_rx_cb( uint8_t b )
 	}
 		
 	rxbuf_pos = 0;
-	/* XXX - this is wrong. But not importantly wrong right now */
-	rxbuf_idx = (rxbuf_idx + 1) & 1;
-	hostser_rxbuf = &rxbuf[rxbuf_idx][0];
 }
 
 static void tx_set_crc( void )
@@ -144,6 +150,8 @@ static void tx_set_crc( void )
 
 void hostser_rx_done( void )
 {
+	/* Change outside view of what's in the receive buffer */
+	hostser_rxbuf = &rxbuf[rxbuf_idx][0];
 	rxed_frame = false;
 }
 
