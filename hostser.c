@@ -78,7 +78,46 @@ void hostser_init( void )
 
 static void rx_fsm ( hs_rx_event_t ev )
 {
-	/* TODO */
+
+	switch ( rx_state ) {
+	case HS_RX_IDLE:
+		if ( ev == EV_RX_RXED_FRAME ) {
+			/* Point ptr for outside world to current buffer */
+			hostser_rxbuf = &rxbuf[rxbuf_idx][0];
+			/* Switch recieve destination to other buffer */
+			rxbuf_idx = (rxbuf_idx + 1) & 1;
+			/* And change state */
+			rx_state = HS_RX_HAVE_FRAME;
+		}
+		break;
+
+	case HS_RX_HAVE_FRAME:
+		if ( ev == EV_RX_RXED_FRAME ) {
+			/* Yikes. Host software should still be processing the
+			 * first frame, so don't mess with hostser_rxbuf.
+			 * instead sit tight in the RX_FULL state - this blocks
+			 * any more receipt of data */
+			rx_state = HS_RX_FULL;
+		} else if ( ev == EV_RX_HANDLED_FRAME ) {
+			/* Data is being read (or will be read) into the other
+			 * rx buffer - no config change needed */
+			rx_state = HS_RX_HAVE_FRAME;
+		}
+		break;
+
+	case HS_RX_FULL:
+		if ( ev == EV_RX_HANDLED_FRAME ) {
+			/* Right - point host software at most recently received
+			 * frame */
+			hostser_rxbuf = &rxbuf[rxbuf_idx][0];
+			/* And we can start reading into the other buffer */
+			rxbuf_idx = (rxbuf_idx + 1) & 1;
+			rx_state = HS_RX_HAVE_FRAME;
+		}
+		break;
+	}
+
+	return;
 }
 
 static void tx_fsm ( hs_tx_event_t ev )
