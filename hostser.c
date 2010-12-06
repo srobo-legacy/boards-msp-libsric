@@ -216,18 +216,13 @@ void hostser_rx_cb( uint8_t b )
 	recv_crc |= rxbuf[rxbuf_idx][ rxbuf_pos-1 ] << 8;
 
 	if( crc == recv_crc ) {
+		rx_fsm( HS_RX_RXED_FRAME );
 
-		/* Swap buffers over - have to do this before callback because
-		 * it'll call hostser_rx_done. In a situation where the cb
-		 * didn't occur in interrupt context, this wouldn't have to
-		 * happen: comming soon! */
-
-		/* Receive into the /other/ buffer */
-		rxbuf_idx = (rxbuf_idx + 1) & 1;
-
-		/* We have a valid frame :-O */
+#if 0
+		/* XXX - move into non-interrupt-context code */
 		if( hostser_conf.rx_cb != NULL )
 			hostser_conf.rx_cb();
+#endif
 	}
 }
 
@@ -242,8 +237,8 @@ static void tx_set_crc( void )
 
 void hostser_rx_done( void )
 {
-	/* Change outside view of what's in the receive buffer */
-	hostser_rxbuf = &rxbuf[rxbuf_idx][0];
+
+	rx_fsm( EV_RX_HANDLED_FRAME );
 }
 
 bool hostser_tx_busy( void )
