@@ -440,6 +440,10 @@ void sric_rx_cb( uint8_t b )
 	uint8_t len;
 	uint16_t crc, recv_crc;
 
+	if ( rx_state == RX_FULL )
+		/* Both buffers are full, discard new data */
+		return;
+
 	if( b == 0x7E ) {
 		escape_next = false;
 		rxbuf_pos = 0;
