@@ -96,7 +96,7 @@ static void rx_fsm ( hs_rx_event_t ev )
 		} else if ( ev == EV_RX_HANDLED_FRAME ) {
 			/* Data is being read (or will be read) into the other
 			 * rx buffer - no config change needed */
-			rx_state = HS_RX_HAVE_FRAME;
+			rx_state = HS_RX_IDLE;
 		}
 		break;
 
