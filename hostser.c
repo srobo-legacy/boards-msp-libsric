@@ -245,11 +245,15 @@ bool hostser_tx_busy( void )
 void hostser_tx( void )
 {
 
-	/* We can't start transmitting until we've stopped transmitting.
-	 * Clearly this is going to spin forever if we call hostser_tx in
-	 * interrupt context and something's in progress */
-	while( hostser_tx_busy() )
-		;
+	/* Don't permit a transmission while we're transmitting.
+	 * XXX - this does _not_ sit well with the following chain of events:
+	 * 1) Receive message from sric bus
+	 * 2) Transmit to host
+	 * 3) Receive message from host
+	 * 4) Compose reply to host
+	 * 5) Transmit to host, panic here */
+	if ( hostser_tx_busy() )
+		while (1) ;
 
 	tx_set_crc();
 	hostser_txlen = SRIC_OVERHEAD + hostser_txbuf[ SRIC_LEN ];
