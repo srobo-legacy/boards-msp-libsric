@@ -135,7 +135,7 @@ static void tx_fsm ( hs_tx_event_t ev )
 		break;
 
 	case HS_TX_SENDING:
-		if ( ev == EV_TXMIT_DONE ) {
+		if ( ev == EV_TX_TXMIT_DONE ) {
 			/* No change to buffer config required. Send a callback
 			 * to sric fsm when out of interrupt context */
 			send_tx_done_cb = true;
@@ -157,7 +157,7 @@ bool hostser_tx_cb( uint8_t *b )
 
 	if( txbuf_pos == hostser_txlen ) {
 		/* Transmission complete */
-		tx_fsm( EV_TXMIT_DONE );
+		tx_fsm( EV_TX_TXMIT_DONE );
 		return false;
 	}
 
@@ -221,7 +221,7 @@ void hostser_rx_cb( uint8_t b )
 	recv_crc |= rxbuf[rxbuf_idx][ rxbuf_pos-1 ] << 8;
 
 	if( crc == recv_crc ) {
-		rx_fsm( HS_RX_RXED_FRAME );
+		rx_fsm( EV_RX_RXED_FRAME );
 	}
 }
 
@@ -264,7 +264,7 @@ void hostser_tx( void )
 	hostser_txlen = SRIC_OVERHEAD + hostser_txbuf[ SRIC_LEN ];
 
 	dint();
-	tx_fsm( EV_TX_QUEUE );
+	tx_fsm( EV_TX_QUEUED );
 	eint();
 }
 
