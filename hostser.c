@@ -41,6 +41,7 @@ typedef enum {
 
 static volatile hs_rx_state_t rx_state = HS_RX_IDLE;
 static volatile hs_tx_state_t tx_state = HS_TX_IDLE;
+static volatile bool send_tx_done_cb = false;
 
 /* Linked in elsewhere */
 extern const hostser_conf_t hostser_conf;
@@ -133,9 +134,9 @@ static void tx_fsm ( hs_tx_event_t ev )
 
 	case HS_TX_SENDING:
 		if ( ev == EV_TXMIT_DONE ) {
-			/* No change to buffer config required */
-			if( hostser_conf.tx_done_cb != NULL )
-				hostser_conf.tx_done_cb();
+			/* No change to buffer config required. Send a callback
+			 * to sric fsm when out of interrupt context */
+			send_tx_done_cb = true;
 		} else if ( ev == EV_TX_QUEUED ) {
 			/* For now, don't permit this. We'll block elsewhere
 			 * until we're back in a state where we can xmit */
@@ -272,5 +273,14 @@ void hostser_poll( void )
 
 		dint();
 		rx_fsm( EV_RX_HANDLED_FRAME );
+	}
+
+	if ( send_tx_done_cb ) {
+		dint();
+		send_tx_done_cb = false;
+		eint();
+
+		if( hostser_conf.tx_done_cb != NULL )
+			hostser_conf.tx_done_cb();
 	}
 }
