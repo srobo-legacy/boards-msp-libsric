@@ -78,6 +78,7 @@ static void rx_fsm ( hs_rx_event_t ev )
 			hostser_rxbuf = &rxbuf[rxbuf_idx][0];
 			/* Switch recieve destination to other buffer */
 			rxbuf_idx = (rxbuf_idx + 1) & 1;
+			rxbuf_pos = 0;
 			/* And change state */
 			rx_state = HS_RX_HAVE_FRAME;
 		}
@@ -104,6 +105,7 @@ static void rx_fsm ( hs_rx_event_t ev )
 			hostser_rxbuf = &rxbuf[rxbuf_idx][0];
 			/* And we can start reading into the other buffer */
 			rxbuf_idx = (rxbuf_idx + 1) & 1;
+			rxbuf_pos = 0;
 			rx_state = HS_RX_HAVE_FRAME;
 		}
 		break;
@@ -118,6 +120,8 @@ static void tx_fsm ( hs_tx_event_t ev )
 	switch ( tx_state ) {
 	case HS_TX_IDLE:
 		if ( ev == EV_TX_QUEUED ) {
+			/* Reset transmit position */
+			txbuf_pos = 0;
 			/* Swap buffers, transmit */
 			hostser_txbuf = &txbuf[txbuf_idx][0];
 			txbuf_idx = (txbuf_idx + 1) & 1;
@@ -224,8 +228,6 @@ void hostser_rx_cb( uint8_t b )
 		if( hostser_conf.rx_cb != NULL )
 			hostser_conf.rx_cb();
 	}
-		
-	rxbuf_pos = 0;
 }
 
 static void tx_set_crc( void )
@@ -257,8 +259,6 @@ void hostser_tx( void )
 
 	tx_set_crc();
 	hostser_txlen = SRIC_OVERHEAD + hostser_txbuf[ SRIC_LEN ];
-
-	txbuf_pos = 0;
 
 	/* Change outside view of where tx buffer is */
 	/* Point outside world to old buffer */
