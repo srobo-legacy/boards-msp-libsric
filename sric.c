@@ -130,6 +130,7 @@ static void start_tx( void )
 	sric_conf.usart_tx_start(sric_conf.usart_n);
 }
 
+/* Called in intr context */
 static bool timeout( void *ud )
 {
 	fsm( EV_TIMEOUT );
@@ -377,7 +378,7 @@ static void fsm( event_t ev )
 	}
 }
 
-
+/* Called in intr context */
 bool sric_tx_cb( uint8_t *b )
 {
 	static bool escape_next = false;
@@ -411,6 +412,7 @@ bool sric_tx_cb( uint8_t *b )
 	return true;
 }
 
+/* Called in intr context */
 void sric_rx_cb( uint8_t b )
 {
 	static bool escape_next = false;
@@ -477,6 +479,7 @@ static void sric_tx_start( uint8_t len, bool _expect_resp )
 	fsm(EV_TX_START);
 }
 
+/* Called in intr context */
 void sric_haz_token( void )
 {
 	fsm(EV_GOT_TOKEN);
