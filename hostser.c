@@ -253,10 +253,12 @@ bool hostser_tx_busy( void )
 
 void hostser_tx( void )
 {
-	if( hostser_tx_busy() ) {
-		/* Panic :-O This must never happen*/
-		while(1);
-	}
+
+	/* We can't start transmitting until we've stopped transmitting.
+	 * Clearly this is going to spin forever if we call hostser_tx in
+	 * interrupt context and something's in progress */
+	while( hostser_tx_busy() )
+		;
 
 	tx_set_crc();
 	hostser_txlen = SRIC_OVERHEAD + hostser_txbuf[ SRIC_LEN ];
