@@ -238,7 +238,9 @@ static void tx_set_crc( void )
 void hostser_rx_done( void )
 {
 
+	dint();
 	rx_fsm( EV_RX_HANDLED_FRAME );
+	eint();
 }
 
 bool hostser_tx_busy( void )
@@ -258,5 +260,7 @@ void hostser_tx( void )
 	tx_set_crc();
 	hostser_txlen = SRIC_OVERHEAD + hostser_txbuf[ SRIC_LEN ];
 
+	dint();
 	tx_fsm( EV_TX_QUEUE );
+	eint();
 }
