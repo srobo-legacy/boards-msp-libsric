@@ -39,8 +39,8 @@ typedef enum {
 	EV_TX_QUEUED
 } hs_tx_event_t;
 
-static hs_rx_state_t rx_state = HS_RX_IDLE;
-static hs_tx_state_t tx_state = HS_TX_IDLE;
+static volatile hs_rx_state_t rx_state = HS_RX_IDLE;
+static volatile hs_tx_state_t tx_state = HS_TX_IDLE;
 
 /* Linked in elsewhere */
 extern const hostser_conf_t hostser_conf;
