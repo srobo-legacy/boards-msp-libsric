@@ -69,6 +69,7 @@ void hostser_init( void )
 {
 }
 
+/* Called in intr context */
 static void rx_fsm ( hs_rx_event_t ev )
 {
 
@@ -115,6 +116,7 @@ static void rx_fsm ( hs_rx_event_t ev )
 	return;
 }
 
+/* Called in intr context */
 static void tx_fsm ( hs_tx_event_t ev )
 {
 
@@ -148,6 +150,7 @@ static void tx_fsm ( hs_tx_event_t ev )
 	return;
 }
 
+/* Called in intr context */
 bool hostser_tx_cb( uint8_t *b )
 {
 	static bool escape_next = false;
@@ -177,6 +180,7 @@ bool hostser_tx_cb( uint8_t *b )
 
 #define is_delim(x) ( (x == 0x7e) || (x == 0x8e) )
 
+/* Called in intr context */
 void hostser_rx_cb( uint8_t b )
 {
 	static bool escape_next = false;
