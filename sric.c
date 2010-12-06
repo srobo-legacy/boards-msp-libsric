@@ -98,8 +98,7 @@ static volatile enum {
 
 #define INTR_TIMEOUT		1
 #define INTR_TX_COMPLETE	2
-#define INTR_RX_COMPLETE	4
-#define INTR_HAZ_TOKEN		8
+#define INTR_HAZ_TOKEN		4
 static volatile uint8_t intr_flags = 0;
 
 static void sric_tx_lock( void );
@@ -476,7 +475,7 @@ void sric_rx_cb( uint8_t b )
 
 	if( crc == recv_crc ) {
 		/* We have a valid frame :-O */
-		intr_flags |= INTR_RX_COMPLETE;
+		rx_fsm( EV_RX_RXED_FRAME );
 	}
 
 	rxbuf_pos = 0;
@@ -538,12 +537,15 @@ void sric_poll( void )
 		fsm( EV_TX_DONE );
 	}
 
-	if (intr_flags & INTR_RX_COMPLETE) {
-		DISABLE_FLAG(INTR_RX_COMPLETE);
+	if (rx_state == RX_FULL || rx_state == RX_HAVE_FRAME) {
 #ifdef SRIC_PROMISC
 		sric_conf.promisc_rx(&sric_if);
 #endif
 		fsm( EV_RX );
+
+		dint();
+		rx_fsm( EV_RX_HANDLED_FRAME );
+		eint();
 	}
 
 	if (intr_flags & INTR_HAZ_TOKEN) {
