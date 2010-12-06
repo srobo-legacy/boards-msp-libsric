@@ -273,6 +273,7 @@ void hostser_poll( void )
 
 		dint();
 		rx_fsm( EV_RX_HANDLED_FRAME );
+		eint();
 	}
 
 	if ( send_tx_done_cb ) {
