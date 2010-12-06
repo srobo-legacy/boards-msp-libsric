@@ -127,6 +127,7 @@ static void tx_fsm ( hs_tx_event_t ev )
 			txbuf_pos = 0;
 			hostser_conf.usart_tx_start(
 					hostser_conf.usart_tx_start_n);
+			tx_state = HS_TX_SENDING;
 		}
 		break;
 
@@ -135,6 +136,7 @@ static void tx_fsm ( hs_tx_event_t ev )
 			/* No change to buffer config required. Send a callback
 			 * to sric fsm when out of interrupt context */
 			send_tx_done_cb = true;
+			tx_state = HS_TX_IDLE;
 		} else if ( ev == EV_TX_QUEUED ) {
 			/* For now, don't permit this. We'll block elsewhere
 			 * until we're back in a state where we can xmit */
