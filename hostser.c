@@ -44,6 +44,9 @@ typedef enum {
 	EV_TX_QUEUED
 } hs_tx_event_t;
 
+static hs_rx_state_t rx_state = HS_RX_IDLE;
+static hs_tx_state_t tx_state = HS_TX_IDLE;
+
 /* Linked in elsewhere */
 extern const hostser_conf_t hostser_conf;
 
@@ -71,6 +74,16 @@ static void tx_set_crc( void );
 
 void hostser_init( void )
 {
+}
+
+static void rx_fsm ( hs_rx_event_t ev )
+{
+	/* TODO */
+}
+
+static void tx_fsm ( hs_tx_event_t ev )
+{
+	/* TODO */
 }
 
 bool hostser_tx_cb( uint8_t *b )
