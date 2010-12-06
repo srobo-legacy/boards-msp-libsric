@@ -15,7 +15,7 @@ extern uint8_t sric_txbuf[];
 /* Number of bytes in the transmit buffer */
 extern uint8_t sric_txlen;
 
-extern uint8_t sric_rxbuf[];
+extern uint8_t *sric_rxbuf;
 
 /* Offsets of fields in the tx buffer */
 enum {
@@ -100,7 +100,7 @@ extern const sric_conf_t sric_conf;
 extern uint8_t sric_addr;
 
 /* Description of this interface */
-extern const sric_if_t sric_if;
+extern sric_if_t sric_if;
 
 /* System command constants */
 enum {

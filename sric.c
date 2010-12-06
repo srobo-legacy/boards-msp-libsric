@@ -35,8 +35,22 @@ static struct {
 	uint8_t out_pos;
 } tx;
 
-uint8_t sric_rxbuf[SRIC_RXBUF_SIZE];
+typedef enum {
+	RX_IDLE,
+	RX_HAVE_FRAME,
+	RX_FULL
+} rx_state_t;
+
+typedef enum {
+	EV_RX_RXED_FRAME,
+	EV_RX_HANDLED_FRAME
+} rx_event_t;
+
+static uint8_t rxbuf[2][SRIC_RXBUF_SIZE];
+uint8_t *sric_rxbuf = &rxbuf[0][0];
+static uint8_t rxbuf_idx = 0;
 static uint8_t rxbuf_pos;
+static volatile rx_event_t rx_state = RX_IDLE;
 
 extern const sric_conf_t sric_conf;
 uint8_t sric_addr;
@@ -93,9 +107,9 @@ static void sric_tx_start( uint8_t len, bool expect_resp );
 static void use_token( bool use );
 static void sric_ctl( sric_ctl_t c );
 
-const sric_if_t sric_if = {
+sric_if_t sric_if = {
 	.txbuf = sric_txbuf,
-	.rxbuf = sric_rxbuf,
+	.rxbuf = &rxbuf[0][0],
 	.tx_lock = sric_tx_lock,
 	.tx_cmd_start = sric_tx_start,
 	.use_token = use_token,
@@ -103,6 +117,7 @@ const sric_if_t sric_if = {
 };
 
 static void fsm( event_t ev );
+static void rx_fsm ( rx_event_t ev );
 
 #define lvds_tx_en() do { (*sric_conf.txen_port) |= sric_conf.txen_mask; } while(0)
 #define lvds_tx_dis() do { (*sric_conf.txen_port) &= ~sric_conf.txen_mask; } while(0)
@@ -536,4 +551,39 @@ void sric_poll( void )
 		fsm( EV_GOT_TOKEN );
 	}
 #undef DISABLE_FLAG
+}
+
+/* Called in intr context */
+static void rx_fsm ( rx_event_t ev )
+{
+
+	switch ( (int) rx_state ) {
+	case RX_IDLE:
+		if ( ev == EV_RX_RXED_FRAME ) {
+			sric_rxbuf = &rxbuf[rxbuf_idx][0];
+			sric_if.rxbuf = sric_rxbuf;
+			rxbuf_idx = (rxbuf_idx + 1) & 1;
+			rxbuf_pos = 0;
+			rx_state = RX_HAVE_FRAME;
+		}
+		break;
+
+	case RX_HAVE_FRAME:
+		if ( ev == EV_RX_RXED_FRAME ) {
+			rx_state = RX_FULL;
+		} else if ( ev == EV_RX_HANDLED_FRAME ) {
+			rx_state = RX_IDLE;
+		}
+		break;
+
+	case RX_FULL:
+		if ( ev == EV_RX_HANDLED_FRAME ) {
+			sric_rxbuf = &rxbuf[rxbuf_idx][0];
+			sric_if.rxbuf = sric_rxbuf;
+			rxbuf_idx = (rxbuf_idx + 1) & 1;
+			rxbuf_pos = 0;
+			rx_state = RX_HAVE_FRAME;
+		}
+		break;
+	}
 }
