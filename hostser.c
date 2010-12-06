@@ -27,11 +27,6 @@ typedef enum {
 typedef enum {
 	HS_TX_IDLE,		/* Nothing happening, capt'n */
 	HS_TX_SENDING,		/* Transmitting data from one buffer */
-	HS_TX_FULL		/* Tranmitting from one, other buffer full */
-				/* XXX - is this a state that should be
-				 * permitted? We should block other code from
-				 * modifying the transmit buffer in this state,
-				 * but there's no mechanism for doing that */
 } hs_tx_state_t;
 
 typedef enum {
@@ -122,7 +117,30 @@ static void rx_fsm ( hs_rx_event_t ev )
 
 static void tx_fsm ( hs_tx_event_t ev )
 {
-	/* TODO */
+
+	switch ( tx_state ) {
+	case HS_TX_IDLE:
+		if ( ev == EV_TX_QUEUED ) {
+			/* Swap buffers, transmit */
+			hostser_txbuf = &txbuf[txbuf_idx][0];
+			txbuf_idx = (txbuf_idx + 1) & 1;
+			/* XXX - piece of code to start xmission */
+		}
+		break;
+
+	case HS_TX_SENDING:
+		if ( ev == EV_TXMIT_DONE ) {
+			/* No change to buffer config required */
+			/* XXX - callback to hostser conf */
+		} else if ( ev == EV_TX_QUEUED ) {
+			/* For now, don't permit this. We'll block elsewhere
+			 * until we're back in a state where we can xmit */
+			while (1) ;
+		}
+		break;
+	}
+
+	return;
 }
 
 bool hostser_tx_cb( uint8_t *b )
