@@ -125,14 +125,17 @@ static void tx_fsm ( hs_tx_event_t ev )
 			/* Swap buffers, transmit */
 			hostser_txbuf = &txbuf[txbuf_idx][0];
 			txbuf_idx = (txbuf_idx + 1) & 1;
-			/* XXX - piece of code to start xmission */
+
+			hostser_conf.usart_tx_start(
+					hostser_conf.usart_tx_start_n);
 		}
 		break;
 
 	case HS_TX_SENDING:
 		if ( ev == EV_TXMIT_DONE ) {
 			/* No change to buffer config required */
-			/* XXX - callback to hostser conf */
+			if( hostser_conf.tx_done_cb != NULL )
+				hostser_conf.tx_done_cb();
 		} else if ( ev == EV_TX_QUEUED ) {
 			/* For now, don't permit this. We'll block elsewhere
 			 * until we're back in a state where we can xmit */
@@ -150,8 +153,7 @@ bool hostser_tx_cb( uint8_t *b )
 
 	if( txbuf_pos == hostser_txlen ) {
 		/* Transmission complete */
-		if( hostser_conf.tx_done_cb != NULL )
-			hostser_conf.tx_done_cb();
+		/* XXX fsm */
 
 		return false;
 	}
@@ -267,5 +269,5 @@ void hostser_tx( void )
 	txbuf_idx = (txbuf_idx + 1) & 1;
 
 	/* Actually begin transmission */
-	hostser_conf.usart_tx_start( hostser_conf.usart_tx_start_n );
+	/* XXX fsm */
 }
