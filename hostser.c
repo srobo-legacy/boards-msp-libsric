@@ -61,9 +61,6 @@ uint8_t *hostser_rxbuf = &rxbuf[0][0];
 /* Where the next byte needs to go */
 static uint8_t rxbuf_pos = 0;
 
-static bool rxed_frame = false;
-static bool txing_frame = false;
-
 /* Set crc in transmit buffer */
 static void tx_set_crc( void );
 
@@ -149,8 +146,6 @@ bool hostser_tx_cb( uint8_t *b )
 
 	if( txbuf_pos == hostser_txlen ) {
 		/* Transmission complete */
-		txing_frame = false;
-
 		if( hostser_conf.tx_done_cb != NULL )
 			hostser_conf.tx_done_cb();
 
@@ -226,7 +221,6 @@ void hostser_rx_cb( uint8_t b )
 		rxbuf_idx = (rxbuf_idx + 1) & 1;
 
 		/* We have a valid frame :-O */
-		rxed_frame = true;
 		if( hostser_conf.rx_cb != NULL )
 			hostser_conf.rx_cb();
 	}
@@ -247,12 +241,11 @@ void hostser_rx_done( void )
 {
 	/* Change outside view of what's in the receive buffer */
 	hostser_rxbuf = &rxbuf[rxbuf_idx][0];
-	rxed_frame = false;
 }
 
 bool hostser_tx_busy( void )
 {
-	return txing_frame;
+	return tx_state == HS_TX_SENDING;
 }
 
 void hostser_tx( void )
@@ -266,7 +259,6 @@ void hostser_tx( void )
 	hostser_txlen = SRIC_OVERHEAD + hostser_txbuf[ SRIC_LEN ];
 
 	txbuf_pos = 0;
-	txing_frame = true;
 
 	/* Change outside view of where tx buffer is */
 	/* Point outside world to old buffer */
