@@ -217,12 +217,6 @@ void hostser_rx_cb( uint8_t b )
 
 	if( crc == recv_crc ) {
 		rx_fsm( HS_RX_RXED_FRAME );
-
-#if 0
-		/* XXX - move into non-interrupt-context code */
-		if( hostser_conf.rx_cb != NULL )
-			hostser_conf.rx_cb();
-#endif
 	}
 }
 
@@ -263,4 +257,16 @@ void hostser_tx( void )
 	dint();
 	tx_fsm( EV_TX_QUEUE );
 	eint();
+}
+
+void hostser_poll( void )
+{
+
+	if ( rx_state == HS_RX_HAVE_FRAME || rx_state == HS_RX_FULL ) {
+		if( hostser_conf.rx_cb != NULL )
+			hostser_conf.rx_cb();
+
+		dint();
+		rx_fsm( EV_RX_HANDLED_FRAME );
+	}
 }
