@@ -183,6 +183,10 @@ void hostser_rx_cb( uint8_t b )
 	uint8_t len;
 	uint16_t crc, recv_crc;
 
+	if ( rx_state == HS_RX_FULL )
+		/* Both buffers are full. Discard. */
+		return;
+
 	if( is_delim(b) ) {
 		escape_next = false;
 		rxbuf_pos = 0;
