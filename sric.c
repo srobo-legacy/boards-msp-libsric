@@ -15,6 +15,7 @@
     Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA. */
 #include "sric.h"
 #include <io.h>
+#include <signal.h>
 #include <sys/cdefs.h>
 #include "crc16.h"
 #include <drivers/sched.h>
@@ -81,6 +82,12 @@ static volatile enum {
 	S_TX_RESP,
 } state;
 
+#define INTR_TIMEOUT		1
+#define INTR_TX_COMPLETE	2
+#define INTR_RX_COMPLETE	4
+#define INTR_HAZ_TOKEN		8
+static volatile uint8_t intr_flags = 0;
+
 static void sric_tx_lock( void );
 static void sric_tx_start( uint8_t len, bool expect_resp );
 static void use_token( bool use );
@@ -133,7 +140,7 @@ static void start_tx( void )
 /* Called in intr context */
 static bool timeout( void *ud )
 {
-	fsm( EV_TIMEOUT );
+	intr_flags |= INTR_TIMEOUT;
 	return false;
 }
 
@@ -391,7 +398,7 @@ bool sric_tx_cb( uint8_t *b )
 		return true;
 	} else if( tx.out_pos > sric_txlen ) {
 		/* Transmission complete */
-		fsm( EV_TX_DONE );
+		intr_flags |= INTR_TX_COMPLETE;
 		return false;
 	}
 
@@ -454,12 +461,7 @@ void sric_rx_cb( uint8_t b )
 
 	if( crc == recv_crc ) {
 		/* We have a valid frame :-O */
-
-#if SRIC_PROMISC
-		/* Alert people to the frame before its butchered */
-		sric_conf.promisc_rx(&sric_if);
-#endif
-		fsm( EV_RX );
+		intr_flags |= INTR_RX_COMPLETE;
 	}
 
 	rxbuf_pos = 0;
@@ -482,7 +484,7 @@ static void sric_tx_start( uint8_t len, bool _expect_resp )
 /* Called in intr context */
 void sric_haz_token( void )
 {
-	fsm(EV_GOT_TOKEN);
+	intr_flags |= INTR_HAZ_TOKEN;
 }
 
 static void use_token( bool use )
@@ -506,4 +508,32 @@ static void sric_ctl ( sric_ctl_t c )
 		sric_conf.token_drv->req();
 		break;
 	}
+}
+
+void sric_poll( void )
+{
+#define DISABLE_FLAG(n) do { dint(); intr_flags &= ~(n); eint(); } while (0)
+	if (intr_flags & INTR_TIMEOUT) {
+		DISABLE_FLAG(INTR_TIMEOUT);
+		fsm( EV_TIMEOUT );
+	}
+
+	if (intr_flags & INTR_TX_COMPLETE) {
+		DISABLE_FLAG(INTR_TX_COMPLETE);
+		fsm( EV_TX_DONE );
+	}
+
+	if (intr_flags & INTR_RX_COMPLETE) {
+		DISABLE_FLAG(INTR_RX_COMPLETE);
+#ifdef SRIC_PROMISC
+		sric_conf.promisc_rx(&sric_if);
+#endif
+		fsm( EV_RX );
+	}
+
+	if (intr_flags & INTR_HAZ_TOKEN) {
+		DISABLE_FLAG(INTR_HAZ_TOKEN);
+		fsm( EV_GOT_TOKEN );
+	}
+#undef DISABLE_FLAG
 }
