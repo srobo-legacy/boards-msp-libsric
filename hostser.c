@@ -277,9 +277,7 @@ void hostser_poll( void )
 		if( hostser_conf.rx_cb != NULL )
 			hostser_conf.rx_cb();
 
-		dint();
-		rx_fsm( EV_RX_HANDLED_FRAME );
-		eint();
+		/* We don't send "handled" msg, that's up to the callback */
 	}
 
 	if ( send_tx_done_cb ) {
