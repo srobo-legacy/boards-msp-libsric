@@ -16,6 +16,7 @@
 #include "hostser.h"
 #include "crc16.h"
 #include <io.h>
+#include <signal.h>
 #include <sys/cdefs.h>
 
 typedef enum {
