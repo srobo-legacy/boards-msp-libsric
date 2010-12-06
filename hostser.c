@@ -153,8 +153,7 @@ bool hostser_tx_cb( uint8_t *b )
 
 	if( txbuf_pos == hostser_txlen ) {
 		/* Transmission complete */
-		/* XXX fsm */
-
+		tx_fsm( EV_TXMIT_DONE );
 		return false;
 	}
 
@@ -262,12 +261,5 @@ void hostser_tx( void )
 	tx_set_crc();
 	hostser_txlen = SRIC_OVERHEAD + hostser_txbuf[ SRIC_LEN ];
 
-	/* Change outside view of where tx buffer is */
-	/* Point outside world to old buffer */
-	hostser_txbuf = &txbuf[txbuf_idx][0];
-	/* flip txbuf to point at last filled buffer */
-	txbuf_idx = (txbuf_idx + 1) & 1;
-
-	/* Actually begin transmission */
-	/* XXX fsm */
+	tx_fsm( EV_TX_QUEUE );
 }
