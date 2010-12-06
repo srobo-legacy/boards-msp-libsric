@@ -48,9 +48,8 @@ static volatile bool send_tx_done_cb = false;
 extern const hostser_conf_t hostser_conf;
 
 /*** Transmit buffer ***/
-static uint8_t txbuf[2][HOSTSER_BUF_SIZE];
-static uint8_t txbuf_idx = 0;
-uint8_t *hostser_txbuf = &txbuf[1][0];
+static uint8_t txbuf[HOSTSER_BUF_SIZE];
+uint8_t *hostser_txbuf = &txbuf[0];
 uint8_t hostser_txlen = 0;
 
 /* Offset of next byte to be transmitted from the tx buffer */
@@ -126,10 +125,6 @@ static void tx_fsm ( hs_tx_event_t ev )
 		if ( ev == EV_TX_QUEUED ) {
 			/* Reset transmit position */
 			txbuf_pos = 0;
-			/* Swap buffers, transmit */
-			hostser_txbuf = &txbuf[txbuf_idx][0];
-			txbuf_idx = (txbuf_idx + 1) & 1;
-
 			hostser_conf.usart_tx_start(
 					hostser_conf.usart_tx_start_n);
 		}
@@ -162,7 +157,7 @@ bool hostser_tx_cb( uint8_t *b )
 		return false;
 	}
 
-	*b = txbuf[txbuf_idx][txbuf_pos];
+	*b = txbuf[txbuf_pos];
 
 	if( escape_next ) {
 		*b ^= 0x20;
