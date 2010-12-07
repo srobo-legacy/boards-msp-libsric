@@ -438,7 +438,6 @@ void sric_rx_cb( uint8_t b )
 {
 	static bool escape_next = false;
 	uint8_t len;
-	uint16_t crc, recv_crc;
 
 	if ( rx_state == RX_FULL )
 		/* Both buffers are full, discard new data */
@@ -471,16 +470,8 @@ void sric_rx_cb( uint8_t b )
 	if( len != rxbuf_pos - (SRIC_LEN + 3) )
 		return;
 
-	/* Everything gets hashed */
-	crc = crc16( &rxbuf[rxbuf_idx][0], rxbuf_pos - 2 );
-
-	recv_crc = rxbuf[ rxbuf_idx] [ rxbuf_pos-2 ];
-	recv_crc |= rxbuf[ rxbuf_idx ] [ rxbuf_pos-1 ] << 8;
-
-	if( crc == recv_crc ) {
-		/* We have a valid frame :-O */
-		rx_fsm( EV_RX_RXED_FRAME );
-	}
+	/* We have a frame :-O */
+	rx_fsm( EV_RX_RXED_FRAME );
 
 	rxbuf_pos = 0;
 }
@@ -542,10 +533,21 @@ void sric_poll( void )
 	}
 
 	if (rx_state == RX_FULL || rx_state == RX_HAVE_FRAME) {
+		/* First, check crc */
+		uint16_t crc, recv_crc;
+		uint8_t len;
+		len = sric_rxbuf[ SRIC_LEN ];
+		crc = crc16( sric_rxbuf, SRIC_DATA + len );
+
+		recv_crc = sric_rxbuf[ SRIC_DATA + len ];
+		recv_crc |= sric_rxbuf[ SRIC_DATA + len + 1 ] << 8;
+
+		if (crc == recv_crc) {
 #ifdef SRIC_PROMISC
-		sric_conf.promisc_rx(&sric_if);
+			sric_conf.promisc_rx(&sric_if);
 #endif
-		fsm( EV_RX );
+			fsm( EV_RX );
+		}
 
 		dint();
 		rx_fsm( EV_RX_HANDLED_FRAME );
