@@ -107,7 +107,13 @@ static bool gw_proc_host_cmd()
 #if SRIC_DIRECTOR
 	case GW_CMD_GEN_TOKEN:
 		require_len(1);
-		token_dir_emit_first();
+
+		/* If we have the token, release it; otherwise generate it */
+		if (sric_conf.token_drv->-have_token()) {
+			sric_conf.token_drv->release();
+		} else {
+			token_dir_emit_first();
+		}
 		break;
 #endif
 	}
