@@ -459,23 +459,23 @@ void sric_rx_cb( uint8_t b )
 	if( rxbuf_pos >= SRIC_RXBUF_SIZE )
 		return;
 
-	sric_rxbuf[rxbuf_pos] = b;
+	rxbuf[rxbuf_idx][rxbuf_pos] = b;
 	rxbuf_pos += 1;
 
-	if( sric_rxbuf[0] != 0x7e
+	if( rxbuf[rxbuf_idx][0] != 0x7e
 	    /* Make sure we've reached the minimum frame size */
 	    || rxbuf_pos < (SRIC_LEN + 2) )
 		return;
 
-	len = sric_rxbuf[SRIC_LEN];
+	len = rxbuf[rxbuf_idx][SRIC_LEN];
 	if( len != rxbuf_pos - (SRIC_LEN + 3) )
 		return;
 
 	/* Everything gets hashed */
-	crc = crc16( sric_rxbuf, rxbuf_pos - 2 );
+	crc = crc16( &rxbuf[rxbuf_idx][0], rxbuf_pos - 2 );
 
-	recv_crc = sric_rxbuf[ rxbuf_pos-2 ];
-	recv_crc |= sric_rxbuf[ rxbuf_pos-1 ] << 8;
+	recv_crc = rxbuf[ rxbuf_idx] [ rxbuf_pos-2 ];
+	recv_crc |= rxbuf[ rxbuf_idx ] [ rxbuf_pos-1 ] << 8;
 
 	if( crc == recv_crc ) {
 		/* We have a valid frame :-O */
