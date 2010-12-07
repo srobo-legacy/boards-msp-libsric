@@ -36,7 +36,8 @@ typedef enum {
 
 typedef enum {
 	IH_IDLE,
-	IH_TRANSMITTING,
+	IH_TRANSMITTING_HOST,
+	IH_TRANSMITTING_SRIC
 } inhost_state_t;
 
 typedef enum {
@@ -116,29 +117,39 @@ static bool gw_proc_host_cmd()
 	/* Yes, modifying the state is naughty, but fun... */
 	gw_insric_state = IS_TRANSMITTING;
 	hostser_tx();
-	return false;
+	return false; /* Shouldn't this be true? */
 }
 
 /* Manages data coming in from the host */
 static void gw_inhost_fsm( gw_event_t event )
 {
+	inhost_state_t new = IH_IDLE;
+
 	switch( gw_inhost_state ) {
 	case IH_IDLE:
 		if( event == EV_HOST_RX ) {
 			bool (*f)(void) = NULL;
 
-			if( hostser_rxbuf[0] == 0x7e )
+			if( hostser_rxbuf[0] == 0x7e ) {
 				f = gw_fwd_to_sric;
-			else if( hostser_rxbuf[0] == 0x8e )
+				new = IH_TRANSMITTING_SRIC;
+			} else if( hostser_rxbuf[0] == 0x8e ) {
 				f = gw_proc_host_cmd;
+				new = IH_TRANSMITTING_HOST;
+			}
 
 			if( f != NULL && f() )
-				gw_inhost_state = IH_TRANSMITTING;
+				gw_inhost_state = new;
 		}
 		break;
 
-	case IH_TRANSMITTING:
+	case IH_TRANSMITTING_SRIC:
 		if( event == EV_SRIC_TX_COMPLETE )
+			gw_inhost_state = IH_IDLE;
+		break;
+
+	case IH_TRANSMITTING_HOST:
+		if ( event == EV_HOST_TX_COMPLETE )
 			gw_inhost_state = IH_IDLE;
 		break;
 	}
@@ -173,6 +184,7 @@ void sric_gw_hostser_rx( void )
 void sric_gw_hostser_tx_done( void )
 {
 	gw_insric_fsm( EV_HOST_TX_COMPLETE );
+	gw_inhost_fsm( EV_HOST_TX_COMPLETE );
 }
 
 void sric_gw_sric_promisc_rx( const sric_if_t *iface )
