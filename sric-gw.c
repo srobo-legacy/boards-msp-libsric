@@ -109,7 +109,7 @@ static bool gw_proc_host_cmd()
 		require_len(1);
 
 		/* If we have the token, release it; otherwise generate it */
-		if (sric_conf.token_drv->-have_token()) {
+		if (sric_conf.token_drv->have_token()) {
 			sric_conf.token_drv->release();
 		} else {
 			token_dir_emit_first();
