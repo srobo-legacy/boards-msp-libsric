@@ -241,7 +241,8 @@ static void fsm( event_t ev )
 			crc_txbuf();
 			sric_txlen += 2;
 
-			if( sric_use_token ) {
+			if( sric_use_token &&
+					!sric_conf.token_drv->have_token()) {
 				sric_conf.token_drv->req();
 				state = S_TX_WAIT_TOKEN;
 			} else {
