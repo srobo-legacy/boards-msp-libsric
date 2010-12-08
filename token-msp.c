@@ -28,11 +28,11 @@ static void req( void )
 
 static void release( void )
 {
-	if(have_token)
-		emit_token();
-
 	have_token = false;
 	requested = false;
+
+	if(have_token)
+		emit_token();
 }
 
 static void cancel_req( void )
