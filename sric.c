@@ -48,7 +48,8 @@ typedef enum {
 
 static uint8_t rxbuf[2][SRIC_RXBUF_SIZE];
 uint8_t *sric_rxbuf = &rxbuf[0][0];
-static uint8_t rxbuf_idx = 0;
+static uint8_t rxbuf_idx = 0;		/* Which rxbuf we're reading into */
+static uint8_t rxbuf_read_idx = 0;	/* Which rxbuf we're reading out of */
 static uint8_t rxbuf_pos;
 static volatile rx_event_t rx_state = RX_IDLE;
 
@@ -569,10 +570,7 @@ static void rx_fsm ( rx_event_t ev )
 	switch ( (int) rx_state ) {
 	case RX_IDLE:
 		if ( ev == EV_RX_RXED_FRAME ) {
-			sric_rxbuf = &rxbuf[rxbuf_idx][0];
-			sric_if.rxbuf = sric_rxbuf;
 			rxbuf_idx = (rxbuf_idx + 1) & 1;
-			rxbuf_pos = 0;
 			rx_state = RX_HAVE_FRAME;
 		}
 		break;
@@ -581,16 +579,23 @@ static void rx_fsm ( rx_event_t ev )
 		if ( ev == EV_RX_RXED_FRAME ) {
 			rx_state = RX_FULL;
 		} else if ( ev == EV_RX_HANDLED_FRAME ) {
+			/* Point sric code to read from next buffer */
+			rxbuf_read_idx = (rxbuf_read_idx + 1) & 1;
+			sric_rxbuf = &rxbuf[rxbuf_read_idx][0];
+			sric_if.rxbuf = sric_rxbuf;
 			rx_state = RX_IDLE;
 		}
 		break;
 
 	case RX_FULL:
 		if ( ev == EV_RX_HANDLED_FRAME ) {
-			sric_rxbuf = &rxbuf[rxbuf_idx][0];
+			/* Update view of where we'll read form next */
+			rxbuf_read_idx = (rxbuf_read_idx + 1) & 1;
+			sric_rxbuf = &rxbuf[rxbuf_read_idx][0];
 			sric_if.rxbuf = sric_rxbuf;
+
+			/* Incoming data goes into the other buffer */
 			rxbuf_idx = (rxbuf_idx + 1) & 1;
-			rxbuf_pos = 0;
 			rx_state = RX_HAVE_FRAME;
 		}
 		break;
