@@ -571,7 +571,7 @@ static void rx_fsm ( rx_event_t ev )
 	switch ( (int) rx_state ) {
 	case RX_IDLE:
 		if ( ev == EV_RX_RXED_FRAME ) {
-			rxbuf_idx = (rxbuf_idx + 1) & 1;
+			rxbuf_idx ^= 1;
 			sric_w_rxbuf = &rxbuf[rxbuf_idx][0];
 			rx_state = RX_HAVE_FRAME;
 		}
@@ -582,7 +582,7 @@ static void rx_fsm ( rx_event_t ev )
 			rx_state = RX_FULL;
 		} else if ( ev == EV_RX_HANDLED_FRAME ) {
 			/* Point sric code to read from next buffer */
-			rxbuf_read_idx = (rxbuf_read_idx + 1) & 1;
+			rxbuf_read_idx ^= 1;
 			sric_rxbuf = &rxbuf[rxbuf_read_idx][0];
 			sric_if.rxbuf = sric_rxbuf;
 			rx_state = RX_IDLE;
@@ -592,12 +592,12 @@ static void rx_fsm ( rx_event_t ev )
 	case RX_FULL:
 		if ( ev == EV_RX_HANDLED_FRAME ) {
 			/* Update view of where we'll read form next */
-			rxbuf_read_idx = (rxbuf_read_idx + 1) & 1;
+			rxbuf_read_idx ^= 1;
 			sric_rxbuf = &rxbuf[rxbuf_read_idx][0];
 			sric_if.rxbuf = sric_rxbuf;
 
 			/* Incoming data goes into the other buffer */
-			rxbuf_idx = (rxbuf_idx + 1) & 1;
+			rxbuf_idx = ^ 1;
 			sric_w_rxbuf = &rxbuf[rxbuf_idx][0];
 			rx_state = RX_HAVE_FRAME;
 		}
