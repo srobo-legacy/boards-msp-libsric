@@ -28,6 +28,7 @@ typedef enum {
 typedef enum {
 	HS_TX_IDLE,		/* Nothing happening, capt'n */
 	HS_TX_SENDING,		/* Transmitting data from one buffer */
+	HS_TX_FULL		/* Transmitting from one buf, other buf full */
 } hs_tx_state_t;
 
 typedef enum {
@@ -48,9 +49,11 @@ static volatile bool send_tx_done_cb = false;
 extern const hostser_conf_t hostser_conf;
 
 /*** Transmit buffer ***/
-static uint8_t txbuf[HOSTSER_BUF_SIZE];
-uint8_t *hostser_txbuf = &txbuf[0];
+static uint8_t txbuf[2][HOSTSER_BUF_SIZE];
+uint8_t *hostser_txbuf = &txbuf[0][0];
+static uint8_t txbuf_idx = 0;
 uint8_t hostser_txlen = 0;
+static uint8_t tx_len = 0;	/* Shadow of hostser_txlen */
 
 /* Offset of next byte to be transmitted from the tx buffer */
 static uint8_t txbuf_pos = 0;
@@ -123,8 +126,14 @@ static void tx_fsm ( hs_tx_event_t ev )
 	switch ( tx_state ) {
 	case HS_TX_IDLE:
 		if ( ev == EV_TX_QUEUED ) {
+			/* Update outside view of where to write tx data */
+			hostser_txbuf = &txbuf[txbuf_idx ^ 1][0];
+
 			/* Reset transmit position */
 			txbuf_pos = 0;
+			tx_len = hostser_txlen;
+
+			/* Actually start transmission */
 			hostser_conf.usart_tx_start(
 					hostser_conf.usart_tx_start_n);
 			tx_state = HS_TX_SENDING;
@@ -133,13 +142,36 @@ static void tx_fsm ( hs_tx_event_t ev )
 
 	case HS_TX_SENDING:
 		if ( ev == EV_TX_TXMIT_DONE ) {
-			/* No change to buffer config required. Send a callback
-			 * to sric fsm when out of interrupt context */
+			/* Point transmit location at next buffer */
+			txbuf_idx ^= 1;
+
+			/* And send a callback */
 			send_tx_done_cb = true;
 			tx_state = HS_TX_IDLE;
 		} else if ( ev == EV_TX_QUEUED ) {
-			/* For now, don't permit this. We'll block elsewhere
-			 * until we're back in a state where we can xmit */
+			/* Transmission continues; however when we have an
+			 * opportunity we point the tx buffer elsewhere */
+			tx_state = HS_TX_FULL;
+		}
+		break;
+	case HS_TX_FULL:
+		if ( ev == EV_TX_TXMIT_DONE ) {
+			/* Point outside world at the just-finished buffer */
+			hostser_txbuf = &txbuf[txbuf_idx][0];
+
+			/* Move buffers along... */
+			txbuf_idx ^= 1;
+
+			/* Reset transmit position */
+			txbuf_pos = 0;
+			tx_len = hostser_txlen;
+
+			/* And transmit */
+			hostser_conf.usart_tx_start(
+					hostser_conf.usart_tx_start_n);
+			tx_state = HS_TX_SENDING;
+		} else if ( ev == EV_TX_QUEUED ) {
+			/* Not valid */
 			while (1) ;
 		}
 		break;
@@ -154,13 +186,13 @@ bool hostser_tx_cb( uint8_t *b )
 	static bool escape_next = false;
 	uint8_t byte;
 
-	if( txbuf_pos == hostser_txlen ) {
+	if( txbuf_pos == tx_len ) {
 		/* Transmission complete */
 		tx_fsm( EV_TX_TXMIT_DONE );
 		return false;
 	}
 
-	byte = txbuf[txbuf_pos];
+	byte = txbuf[txbuf_idx][txbuf_pos];
 	*b = byte;
 
 	if( escape_next ) {
@@ -246,23 +278,8 @@ void hostser_rx_done( void )
 	eint();
 }
 
-bool hostser_tx_busy( void )
-{
-	return tx_state == HS_TX_SENDING;
-}
-
 void hostser_tx( void )
 {
-
-	/* Don't permit a transmission while we're transmitting.
-	 * XXX - this does _not_ sit well with the following chain of events:
-	 * 1) Receive message from sric bus
-	 * 2) Transmit to host
-	 * 3) Receive message from host
-	 * 4) Compose reply to host
-	 * 5) Transmit to host, panic here */
-	if ( hostser_tx_busy() )
-		while (1) ;
 
 	tx_set_crc();
 	hostser_txlen = SRIC_OVERHEAD + hostser_txbuf[ SRIC_LEN ];
