@@ -152,6 +152,7 @@ static void tx_fsm ( hs_tx_event_t ev )
 bool hostser_tx_cb( uint8_t *b )
 {
 	static bool escape_next = false;
+	uint8_t byte;
 
 	if( txbuf_pos == hostser_txlen ) {
 		/* Transmission complete */
@@ -159,14 +160,15 @@ bool hostser_tx_cb( uint8_t *b )
 		return false;
 	}
 
-	*b = txbuf[txbuf_pos];
+	byte = txbuf[txbuf_pos];
+	*b = byte;
 
 	if( escape_next ) {
 		*b ^= 0x20;
 		escape_next = false;
 
 	/* Don't escape byte 0 (0x7E) */
-	} else if( txbuf_pos != 0 && (*b == 0x7E || *b == 0x7D ) ) {
+	} else if( txbuf_pos != 0 && (byte == 0x7E || byte == 0x7D ) ) {
 		*b = 0x7D;
 		escape_next = true;
 		return true;

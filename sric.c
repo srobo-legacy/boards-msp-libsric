@@ -46,7 +46,7 @@ typedef enum {
 	EV_RX_HANDLED_FRAME
 } rx_event_t;
 
-static uint8_t rxbuf[2][SRIC_RXBUF_SIZE];
+static uint8_t rxbuf[2][SRIC_RXBUF_SIZE + 1];
 uint8_t *sric_w_rxbuf = &rxbuf[0][0];
 uint8_t *sric_rxbuf = &rxbuf[0][0];
 static uint8_t rxbuf_read_idx = 0;	/* Which rxbuf we're reading out of */
