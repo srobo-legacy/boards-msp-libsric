@@ -49,7 +49,6 @@ typedef enum {
 static uint8_t rxbuf[2][SRIC_RXBUF_SIZE];
 uint8_t *sric_w_rxbuf = &rxbuf[0][0];
 uint8_t *sric_rxbuf = &rxbuf[0][0];
-static uint8_t rxbuf_idx = 0;		/* Which rxbuf we're reading into */
 static uint8_t rxbuf_read_idx = 0;	/* Which rxbuf we're reading out of */
 static uint8_t rxbuf_pos;
 static volatile rx_event_t rx_state = RX_IDLE;
@@ -571,8 +570,11 @@ static void rx_fsm ( rx_event_t ev )
 	switch ( (int) rx_state ) {
 	case RX_IDLE:
 		if ( ev == EV_RX_RXED_FRAME ) {
-			rxbuf_idx ^= 1;
-			sric_w_rxbuf = &rxbuf[rxbuf_idx][0];
+			if (sric_w_rxbuf < &rxbuf[1][0])
+				sric_w_rxbuf = &rxbuf[1][0];
+			else
+				sric_w_rxbuf = &rxbuf[0][0];
+
 			rx_state = RX_HAVE_FRAME;
 		}
 		break;
@@ -597,8 +599,11 @@ static void rx_fsm ( rx_event_t ev )
 			sric_if.rxbuf = sric_rxbuf;
 
 			/* Incoming data goes into the other buffer */
-			rxbuf_idx = ^ 1;
-			sric_w_rxbuf = &rxbuf[rxbuf_idx][0];
+			if (sric_w_rxbuf < &rxbuf[1][0])
+				sric_w_rxbuf = &rxbuf[1][0];
+			else
+				sric_w_rxbuf = &rxbuf[0][0];
+
 			rx_state = RX_HAVE_FRAME;
 		}
 		break;
