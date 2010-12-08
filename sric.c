@@ -551,6 +551,11 @@ void sric_poll( void )
 			fsm( EV_RX );
 		}
 
+		/* Update srics view of where the input buffer is */
+		rxbuf_read_idx ^= 1;
+		sric_rxbuf = &rxbuf[rxbuf_read_idx][0];
+		sric_if.rxbuf = sric_rxbuf;
+
 		dint();
 		rx_fsm( EV_RX_HANDLED_FRAME );
 		eint();
@@ -583,21 +588,12 @@ static void rx_fsm ( rx_event_t ev )
 		if ( ev == EV_RX_RXED_FRAME ) {
 			rx_state = RX_FULL;
 		} else if ( ev == EV_RX_HANDLED_FRAME ) {
-			/* Point sric code to read from next buffer */
-			rxbuf_read_idx ^= 1;
-			sric_rxbuf = &rxbuf[rxbuf_read_idx][0];
-			sric_if.rxbuf = sric_rxbuf;
 			rx_state = RX_IDLE;
 		}
 		break;
 
 	case RX_FULL:
 		if ( ev == EV_RX_HANDLED_FRAME ) {
-			/* Update view of where we'll read form next */
-			rxbuf_read_idx ^= 1;
-			sric_rxbuf = &rxbuf[rxbuf_read_idx][0];
-			sric_if.rxbuf = sric_rxbuf;
-
 			/* Incoming data goes into the other buffer */
 			if (sric_w_rxbuf < &rxbuf[1][0])
 				sric_w_rxbuf = &rxbuf[1][0];
