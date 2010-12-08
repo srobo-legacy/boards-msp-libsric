@@ -1,4 +1,5 @@
 #include "token-dir.h"
+#include <signal.h>
 #include <stdbool.h>
 #include <io.h>
 #include <drivers/pinint.h>
@@ -29,11 +30,12 @@ static void req( void )
 
 static void release( void )
 {
-	have_token = false;
 	requested = false;
 
-	if(have_token)
+	if(have_token) {
+		have_token = false;
 		emit_token();
+	}
 }
 
 static void cancel_req( void )
