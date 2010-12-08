@@ -78,9 +78,7 @@ uint8_t sric_client_rx( const sric_if_t *iface )
 	const uint8_t cmd = data[0];
 
 	/* Broadcast: */
-	if( dest == 0
-	    && is_syscmd(cmd) ) {
-		/* We only process syscmds through broadcast */
+	if( dest == 0 && is_syscmd(cmd) ) {
 		uint8_t sys = syscmd_num(cmd);
 
 		if ( len > 0 && sys < NUM_SYSCMDS )
