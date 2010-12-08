@@ -47,6 +47,7 @@ typedef enum {
 } rx_event_t;
 
 static uint8_t rxbuf[2][SRIC_RXBUF_SIZE];
+uint8_t *sric_w_rxbuf = &rxbuf[0][0];
 uint8_t *sric_rxbuf = &rxbuf[0][0];
 static uint8_t rxbuf_idx = 0;		/* Which rxbuf we're reading into */
 static uint8_t rxbuf_read_idx = 0;	/* Which rxbuf we're reading out of */
@@ -460,15 +461,15 @@ void sric_rx_cb( uint8_t b )
 	if( rxbuf_pos >= SRIC_RXBUF_SIZE )
 		return;
 
-	rxbuf[rxbuf_idx][rxbuf_pos] = b;
+	sric_w_rxbuf[rxbuf_pos] = b;
 	rxbuf_pos += 1;
 
-	if( rxbuf[rxbuf_idx][0] != 0x7e
+	if( sric_w_rxbuf[0] != 0x7e
 	    /* Make sure we've reached the minimum frame size */
 	    || rxbuf_pos < (SRIC_LEN + 2) )
 		return;
 
-	len = rxbuf[rxbuf_idx][SRIC_LEN];
+	len = sric_w_rxbuf[SRIC_LEN];
 	if( len != rxbuf_pos - (SRIC_LEN + 3) )
 		return;
 
@@ -571,6 +572,7 @@ static void rx_fsm ( rx_event_t ev )
 	case RX_IDLE:
 		if ( ev == EV_RX_RXED_FRAME ) {
 			rxbuf_idx = (rxbuf_idx + 1) & 1;
+			sric_w_rxbuf = &rxbuf[rxbuf_idx][0];
 			rx_state = RX_HAVE_FRAME;
 		}
 		break;
@@ -596,6 +598,7 @@ static void rx_fsm ( rx_event_t ev )
 
 			/* Incoming data goes into the other buffer */
 			rxbuf_idx = (rxbuf_idx + 1) & 1;
+			sric_w_rxbuf = &rxbuf[rxbuf_idx][0];
 			rx_state = RX_HAVE_FRAME;
 		}
 		break;
