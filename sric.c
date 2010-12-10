@@ -51,7 +51,7 @@ uint8_t *sric_w_rxbuf = &rxbuf[0][0];
 uint8_t *sric_rxbuf = &rxbuf[0][0];
 static uint8_t rxbuf_read_idx = 0;	/* Which rxbuf we're reading out of */
 static uint8_t rxbuf_pos;
-static volatile rx_event_t rx_state = RX_IDLE;
+static volatile rx_state_t rx_state = RX_IDLE;
 
 extern const sric_conf_t sric_conf;
 uint8_t sric_addr;
