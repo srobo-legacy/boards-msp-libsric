@@ -307,7 +307,6 @@ static void fsm( event_t ev )
 
 			/* Don't let anyone hear the rest of our transmission */
 			lvds_tx_dis();
-
 			state = S_TX_TIMED_OUT;
 		}
 		break;
