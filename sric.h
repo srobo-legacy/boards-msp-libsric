@@ -120,4 +120,9 @@ void sric_rx_cb( uint8_t b );
 /* Callback for got the token */
 void sric_haz_token( void );
 
+/* Sric routines to poll for activity caused by interrupts: */
+void sric_poll( void );
+/* Host serial events */
+void hostser_poll( void );
+
 #endif	/* __SRIC_H */
