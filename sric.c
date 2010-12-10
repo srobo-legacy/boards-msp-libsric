@@ -268,7 +268,6 @@ static void fsm( event_t ev )
 	case S_TX:
 		/* Transmitting a frame */
 		if(ev == EV_TX_DONE) {
-			lvds_tx_dis();
 			sric_conf.usart_rx_gate(sric_conf.usart_n, true);
 
 			if( sric_use_token )
@@ -386,7 +385,6 @@ static void fsm( event_t ev )
 	case S_TX_RESP:
 		/* Transmitting response frame */
 		if(ev == EV_TX_DONE ) {
-			lvds_tx_dis();
 			sric_conf.usart_rx_gate(sric_conf.usart_n, true);
 			if( sric_use_token )
 				sric_conf.token_drv->release();
@@ -407,12 +405,28 @@ bool sric_tx_cb( uint8_t *b )
 	static bool escape_next = false;
 
 	if( tx.out_pos == sric_txlen ) {
-		/* Add an additional 0x7e on the end of the frame
-		   to allow stop bits to be received correctly */
-		*b = 0x7e;
+		/* As per the srobo-devel@ list on 09/12/2010, some death
+		 * occurs at the end of transmission if we release the token
+		 * on the "transmit buffer empty" intr - we need to wait for
+		 * the last bit and stop bit to get out. So:
+		 *
+		 * 1) Send two buffer bytes at end of transmission
+		 * 2) Cut it off at the knees by disabling txmission in the
+		 *    empty buffer intr
+		 * 3) at next buffer empty intr, we know a clean stop bit got
+		 *    out and the bus is idle from everyone elses perspective
+		 */
+		*b = 0xFF;
 		tx.out_pos++;
 		return true;
-	} else if( tx.out_pos > sric_txlen ) {
+	} else if ( tx.out_pos == sric_txlen + 1 ) {
+
+		lvds_tx_dis();
+
+		*b = 0xFF;
+		tx.out_pos++;
+		return true;
+	} else if( tx.out_pos == sric_txlen + 2) {
 		/* Transmission complete */
 		intr_flags |= INTR_TX_COMPLETE;
 		return false;
