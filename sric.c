@@ -268,8 +268,6 @@ static void fsm( event_t ev )
 	case S_TX:
 		/* Transmitting a frame */
 		if(ev == EV_TX_DONE) {
-			sric_conf.usart_rx_gate(sric_conf.usart_n, true);
-
 			if( sric_use_token )
 				sric_conf.token_drv->release();
 
@@ -314,7 +312,6 @@ static void fsm( event_t ev )
 	case S_TX_TIMED_OUT:
 		/* Finished transmitting */
 		if(ev == EV_TX_DONE) {
-			sric_conf.usart_rx_gate(sric_conf.usart_n, true);
 			if( sric_use_token )
 				sric_conf.token_drv->release();
 
@@ -384,7 +381,6 @@ static void fsm( event_t ev )
 	case S_TX_RESP:
 		/* Transmitting response frame */
 		if(ev == EV_TX_DONE ) {
-			sric_conf.usart_rx_gate(sric_conf.usart_n, true);
 			if( sric_use_token )
 				sric_conf.token_drv->release();
 
@@ -420,7 +416,11 @@ bool sric_tx_cb( uint8_t *b )
 		return true;
 	} else if ( tx.out_pos == sric_txlen + 1 ) {
 
+		/* Disable transmission; enable receiving. This is safe because
+		 * the tail of the padding byte(s) never make it onto the bus
+		 * from now on */
 		lvds_tx_dis();
+		sric_conf.usart_rx_gate(sric_conf.usart_n, true);
 
 		*b = 0xFF;
 		tx.out_pos++;
