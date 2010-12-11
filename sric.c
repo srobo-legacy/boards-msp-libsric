@@ -213,11 +213,11 @@ static void fsm( event_t ev )
 			if( l == SRIC_RESPONSE_DEFER ) {
 				/* Response isn't ready yet.  Wait. */
 				state = S_WAIT_ASM_RESP;
-			} else if( l <= MAX_PAYLOAD ) {
+			} else if( (l & SRIC_LENGTH_MASK) <= MAX_PAYLOAD ) {
 				crc_txbuf();
 				sric_txlen = l + 2;
 
-				if( sric_use_token ) {
+				if( sric_use_token && !(l & SRIC_RESPOND_NOW)) {
 					sric_conf.token_drv->req();
 					state = S_TX_RESP_WAIT_TOKEN;
 				} else {

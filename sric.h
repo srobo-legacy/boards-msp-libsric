@@ -38,13 +38,18 @@ enum {
 #define sric_frame_set_ack(buf) do { buf[SRIC_DEST] = sric_addr_set_ack(buf[SRIC_DEST]); } while (0)
 
 /**** Special return values for the command rx callback to return: *****/
+/* Respond now, regardless of token posession. Is a flag bit */
+#define SRIC_RESPOND_NOW 128
 /* The response will be provided to the interface later */
-#define SRIC_RESPONSE_DEFER 255
+#define SRIC_RESPONSE_DEFER 127
 /* Do not respond to this command */
-#define SRIC_IGNORE 254
+#define SRIC_IGNORE 126
 /* Smallest special return - used to identify when we've received a special
  * response and need to pass it back up the call chain */
 #define SRIC_SPECIAL_RET_LIMIT SRIC_IGNORE
+
+/* Mask to extract length from rx callback */
+#define SRIC_LENGTH_MASK	0x7F
 
 /* SRIC configuration
    There must be a const instance of this called sric_conf somewhere. */
