@@ -126,8 +126,11 @@ static uint8_t syscmd_enum_tok_advance( const sric_if_t *iface )
 	/* Start using the token */
 	iface->use_token(true);
 
-	/* Respond with ACK */
-	return 0;
+	/* Respond with ACK - and immediately, without waiting for token. See
+	 * srobo-devel@ traffic on 11/12/2010, we can deadlock if the first ack
+	 * to a TOK_ADVANCE disappears, we send a second ack, but are already
+	 * in token mode and so wait forever for a token */
+	return 0 | SRIC_RESPOND_NOW;
 }
 
 /* Receive a new address from the director, and reply with info */
