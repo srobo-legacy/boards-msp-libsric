@@ -275,6 +275,9 @@ static void fsm( event_t ev )
 				/* No response expected */
 				uint8_t i;
 
+				/* Remove response timeout */
+				sched_rem(&timeout_task);
+
 				if( sric_conf.rx_resp != NULL ) {
 					/* Clear the rxbuf to ensure our "user" doesn't get confused... */
 					for( i=0; i<SRIC_RXBUF_SIZE; i++ )
