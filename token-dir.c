@@ -61,8 +61,12 @@ static sched_task_t emit_timeout = {
 static void token_isr(uint16_t flags)
 {
 	if( have_token )
-		/* TODO: Deal with this situation. */
-		while(1);
+		/* So, this occuring shows there are duplicate tokens on the
+		 * bus. This sucks, and could have caused data corruption.
+		 * However, there's nothing that can be done at this point
+		 * which will make it any better, and in fact it's good that
+		 * we can congeal two tokens into one by dropping one here. */
+		return;
 
 	if( requested ) {
 		have_token = true;
