@@ -50,7 +50,10 @@ void sric_client_init( void )
 static uint8_t invoke( const sric_cmd_t *cmd, const sric_if_t *iface )
 {
 	uint8_t len = cmd->cmd( iface );
-	if (len >= SRIC_SPECIAL_RET_LIMIT)
+
+	/* Return immediately if a special error code was returned; however
+	 * don't count the SRIC_RESPOND_NOW flag */
+	if ((len & ~SRIC_RESPOND_NOW) >= SRIC_SPECIAL_RET_LIMIT)
 		return len;
 
 	uint8_t const *rxbuf = iface->rxbuf;
@@ -58,7 +61,7 @@ static uint8_t invoke( const sric_cmd_t *cmd, const sric_if_t *iface )
 	iface->txbuf[0] = 0x7e;
 	iface->txbuf[SRIC_DEST] = rxbuf[SRIC_SRC];
 	iface->txbuf[SRIC_SRC] = sric_addr;
-	iface->txbuf[SRIC_LEN] = len;
+	iface->txbuf[SRIC_LEN] = len & ~SRIC_RESPOND_NOW;
 	sric_frame_set_ack(iface->txbuf);
 
 	return len + SRIC_HEADER_SIZE;
