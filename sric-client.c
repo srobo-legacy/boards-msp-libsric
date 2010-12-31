@@ -15,6 +15,8 @@
     Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA. */
 #include "sric-client.h"
 
+#include <drivers/sched.h>
+
 /* Reset the device, move into enumeration mode */
 static uint8_t syscmd_reset( const sric_if_t *iface );
 
@@ -36,6 +38,31 @@ static const sric_cmd_t syscmds[] =
 	{ syscmd_addr_assign },
 	{ syscmd_addr_info },
 };
+
+static sched_task_t delay_task;
+
+static volatile bool delay_flag = false;
+
+static bool delay_cb( void *dummy __attribute__((unused)))
+{
+
+	delay_flag = true;
+	return false;
+}
+
+void insert_enum_delay( void )
+{
+
+	delay_task.t = 1;
+	delay_task.cb = delay_cb;
+	sched_add(&delay_task);
+
+	while (delay_flag == false)
+		;
+
+	delay_flag = false;
+	return;
+}
 
 #define NUM_SYSCMDS ( sizeof(syscmds) / sizeof(*syscmds) )
 
@@ -84,8 +111,10 @@ uint8_t sric_client_rx( const sric_if_t *iface )
 	if( dest == 0 && is_syscmd(cmd) ) {
 		uint8_t sys = syscmd_num(cmd);
 
-		if ( len > 0 && sys < NUM_SYSCMDS )
+		if ( len > 0 && sys < NUM_SYSCMDS ) {
+			insert_enum_delay();
 			return invoke( syscmds + sys, iface );
+		}
 
 		return SRIC_IGNORE;
 	}
@@ -99,10 +128,12 @@ uint8_t sric_client_rx( const sric_if_t *iface )
 	if( is_syscmd(cmd) ) {
 		uint8_t sys = syscmd_num(cmd);
 
-		if ( sys < NUM_SYSCMDS )
+		if ( sys < NUM_SYSCMDS ) {
+			insert_enum_delay();
 			return invoke( syscmds + sys, iface );
-		else
+		} else {
 			return SRIC_CLIENT_INV_CMD;
+		}
 	}
 
 	if( cmd < sric_cmd_num )
