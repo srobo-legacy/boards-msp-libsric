@@ -10,7 +10,7 @@ typedef enum {
 	SRIC_CLASS_POWER,
 	SRIC_CLASS_MOTOR,
 	SRIC_CLASS_JOINTIO,
-	SRIC_CLASS_PWM,
+	SRIC_CLASS_SERVO,
 } sric_class_t;
 
 typedef struct {
