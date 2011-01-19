@@ -6,11 +6,12 @@
 
 /* Classes of boards */
 typedef enum {
-	SRIC_CLASS_PCSRIC,
+	SRIC_CLASS_MASTER,
 	SRIC_CLASS_POWER,
 	SRIC_CLASS_MOTOR,
 	SRIC_CLASS_JOINTIO,
 	SRIC_CLASS_SERVO,
+	SRIC_CLASS_PCSRIC,
 } sric_class_t;
 
 typedef struct {
