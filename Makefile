@@ -15,7 +15,7 @@ depend: *.c
 		${CC} ${CFLAGS} -MM $$file -o - >> $@ ; \
 	done ;
 
-PHONY: clean
+.PHONY: clean
 
 clean:
 	-rm -f *.o *.a
