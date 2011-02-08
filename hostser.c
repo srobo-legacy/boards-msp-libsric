@@ -200,7 +200,7 @@ bool hostser_tx_cb( uint8_t *b )
 		escape_next = false;
 
 	/* Don't escape byte 0 (0x7E) */
-	} else if( txbuf_pos != 0 && (byte == 0x7E || byte == 0x7D ) ) {
+	} else if( txbuf_pos != 0 && (byte == 0x7E || byte == 0x8E || byte == 0x7D ) ) {
 		*b = 0x7D;
 		escape_next = true;
 		return true;
