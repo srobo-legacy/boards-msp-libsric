@@ -172,12 +172,14 @@ static void register_timeout( void )
 	sched_add(&timeout_task);
 }
 
-static void reset_timeout( void *ud )
+#ifndef DIRECTOR
+static bool reset_timeout( void *ud )
 {
 
 	intr_flags |= INTR_RESET_DONE;
 	return false;
 }
+#endif
 
 static void proc_queued_reset( void )
 {
@@ -188,15 +190,21 @@ static void proc_queued_reset( void )
 		/* Throw away our address */
 		sric_addr = 0;
 
-		/* Release token if we have it */
-		sric_conf.token_drv->release();
-
 		/* If there's a timeout, remove it */
 		sched_rem(&timeout_task);
+
+#ifdef DIRECTOR
+		/* If we're the director, request the token immediately */
+		sric_conf.token_drv->req();
+#else
+		/* Release token if we have it, then in a bit, request it again.
+		 * This is in aid of flushing the token out of the bus. */
+		sric_conf.token_drv->release();
 
 		timeout_task.t = 5;
 		timeout_task.cb = reset_timeout;
 		sched_add(&timeout_task);
+#endif
 	}
 }
 
@@ -548,12 +556,14 @@ static void sric_ctl ( sric_ctl_t c )
 void sric_poll( void )
 {
 #define DISABLE_FLAG(n) do { dint(); intr_flags &= ~(n); eint(); } while (0)
+#ifndef DIRECTOR
 	if (intr_flags & INTR_RESET_DONE) {
 		DISABLE_FLAG(INTR_RESET_DONE);
 		/* Request the token for enumeration */
 		sric_conf.token_drv->req();
 		sric_reset_queued = false;
 	}
+#endif
 
 	if (intr_flags & INTR_TIMEOUT) {
 		DISABLE_FLAG(INTR_TIMEOUT);
