@@ -100,6 +100,7 @@ static volatile enum {
 #define INTR_TIMEOUT		1
 #define INTR_TX_COMPLETE	2
 #define INTR_HAZ_TOKEN		4
+#define INTR_RESET_DONE		8
 static volatile uint8_t intr_flags = 0;
 
 static void sric_tx_lock( void );
@@ -171,20 +172,31 @@ static void register_timeout( void )
 	sched_add(&timeout_task);
 }
 
+static void reset_timeout( void *ud )
+{
+
+	intr_flags |= INTR_RESET_DONE;
+	return false;
+}
+
 static void proc_queued_reset( void )
 {
 	if( sric_reset_queued ) {
-		/* It's enumeration time */
-		sric_reset_queued = false;
-
 		/* Move to tokenless mode */
 		sric_use_token_buffered = false;
 
 		/* Throw away our address */
 		sric_addr = 0;
 
-		/* Request the token for enumeration */
-		sric_conf.token_drv->req();
+		/* Release token if we have it */
+		sric_conf.token_drv->release();
+
+		/* If there's a timeout, remove it */
+		sched_rem(&timeout_task);
+
+		timeout_task.t = 5;
+		timeout_task.cb = reset_timeout;
+		sched_add(&timeout_task);
 	}
 }
 
@@ -536,6 +548,13 @@ static void sric_ctl ( sric_ctl_t c )
 void sric_poll( void )
 {
 #define DISABLE_FLAG(n) do { dint(); intr_flags &= ~(n); eint(); } while (0)
+	if (intr_flags & INTR_RESET_DONE) {
+		DISABLE_FLAG(INTR_RESET_DONE);
+		/* Request the token for enumeration */
+		sric_conf.token_drv->req();
+		sric_reset_queued = false;
+	}
+
 	if (intr_flags & INTR_TIMEOUT) {
 		DISABLE_FLAG(INTR_TIMEOUT);
 		fsm( EV_TIMEOUT );
