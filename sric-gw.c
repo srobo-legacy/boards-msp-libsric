@@ -30,8 +30,6 @@ typedef enum {
 	EV_SRIC_RX,
 	/* Finished transmitting a frame over SRIC */
 	EV_SRIC_TX_COMPLETE,
-	/* Received frame from local SRIC device (ie, this board) */
-	EV_LOCAL_RX,
 	/* SRIC interface experienced an error */
 	EV_SRIC_ERROR,
 } gw_event_t;
@@ -102,7 +100,7 @@ static bool gw_fwd_to_sric()
 
 	if ((ret & SRIC_LENGTH_MASK) <= MAX_PAYLOAD) {
 		/* Hello - gateway device has a response */
-		gw_insric_fsm( EV_LOCAL_RX );
+		gw_insric_fsm( EV_SRIC_RX );
 	}
 
 	return true;
@@ -167,10 +165,11 @@ static bool gw_proc_host_cmd()
 
 	hostser_rx_done();
 
-	/* Yes, modifying the state is naughty, but fun... */
-	gw_insric_state = IS_TRANSMITTING;
-	hostser_tx();
-	return false; /* Shouldn't this be true? */
+	/* Calling insric FSM from within inhost FSM: should be fine, there are
+	 * no paths from insric FSM to inhost. And being full duplex, the host
+	 * interface state doesn't (shouldn't) share any state */
+	gw_insric_fsm( EV_SRIC_RX );
+	return true;
 }
 
 /* Manages data coming in from the host */
@@ -215,15 +214,7 @@ static void gw_insric_fsm( gw_event_t event )
 	case IS_IDLE:
 		if( event == EV_SRIC_RX ) {
 			/* Transmit the frame to the host */
-			memcpy( hostser_txbuf, sric_rxbuf, sric_rxbuf[SRIC_LEN] + SRIC_HEADER_SIZE );
 
-			hostser_tx();
-
-			gw_insric_state = IS_TRANSMITTING;
-		} else if ( event == EV_LOCAL_RX ) {
-			/* Sric device on this board has a frame to send -
-			 * no need to perform copying, should already be in
-			 * hostser_txbuf */
 			hostser_tx();
 			gw_insric_state = IS_TRANSMITTING;
 		}
@@ -248,6 +239,7 @@ void sric_gw_hostser_tx_done( void )
 
 void sric_gw_sric_promisc_rx( const sric_if_t *iface )
 {
+	memcpy( gw_sric_if.txbuf, sric_rxbuf, sric_rxbuf[SRIC_LEN] + SRIC_HEADER_SIZE );
 	gw_insric_fsm( EV_SRIC_RX );
 }
 
