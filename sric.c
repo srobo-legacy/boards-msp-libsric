@@ -124,12 +124,8 @@ static void rx_fsm ( rx_event_t ev );
 
 void sric_init( void )
 {
-	if( SRIC_DIRECTOR ) {
-		sric_addr = 1;
-	} else {
-		sric_addr = 0;
-	}
 
+	sric_addr = 0;
 	lvds_tx_dis();
 	(*sric_conf.txen_dir) |= sric_conf.txen_mask;
 }
