@@ -115,12 +115,16 @@ static bool gw_proc_host_cmd()
 	uint8_t len = hostser_rxbuf[SRIC_LEN];
 	uint8_t *data = hostser_rxbuf + SRIC_DATA;
 
-	if( len == 0 )
+	if( len == 0 ) {
+		hostser_rx_done();
 		return false;
+	}
 
-	if( gw_insric_state != IS_IDLE )
+	if( gw_insric_state != IS_IDLE ) {
+		hostser_rx_done();
 		/* Ignore when we can't transmit a response */
 		return false;
+	}
 
 	hostser_txbuf[0] = 0x8e;
 	hostser_txbuf[SRIC_DEST] = 1 | 0x80; /* Destination is bus director */
