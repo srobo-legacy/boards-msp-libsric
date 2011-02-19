@@ -36,7 +36,6 @@ typedef enum {
 
 typedef enum {
 	IH_IDLE,
-	IH_TRANSMITTING_HOST,
 	IH_TRANSMITTING_SRIC
 } inhost_state_t;
 
@@ -196,7 +195,7 @@ static void gw_inhost_fsm( gw_event_t event )
 				new = IH_TRANSMITTING_SRIC;
 			} else if( hostser_rxbuf[0] == 0x8e ) {
 				f = gw_proc_host_cmd;
-				new = IH_TRANSMITTING_HOST;
+				new = IH_IDLE;
 			}
 
 			if( f != NULL && f() )
@@ -206,11 +205,6 @@ static void gw_inhost_fsm( gw_event_t event )
 
 	case IH_TRANSMITTING_SRIC:
 		if( event == EV_SRIC_TX_COMPLETE )
-			gw_inhost_state = IH_IDLE;
-		break;
-
-	case IH_TRANSMITTING_HOST:
-		if ( event == EV_HOST_TX_COMPLETE )
 			gw_inhost_state = IH_IDLE;
 		break;
 	}
@@ -246,7 +240,6 @@ void sric_gw_hostser_rx( void )
 void sric_gw_hostser_tx_done( void )
 {
 	gw_insric_fsm( EV_HOST_TX_COMPLETE );
-	gw_inhost_fsm( EV_HOST_TX_COMPLETE );
 }
 
 void sric_gw_sric_promisc_rx( const sric_if_t *iface )
