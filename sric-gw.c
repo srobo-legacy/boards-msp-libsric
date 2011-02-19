@@ -42,6 +42,7 @@ typedef enum {
 typedef enum {
 	IS_IDLE,
 	IS_TRANSMITTING,
+	IS_FULL
 } insric_state_t;
 
 static inhost_state_t gw_inhost_state;
@@ -98,7 +99,13 @@ static bool gw_fwd_to_sric()
 		      /* Avoid SRIC IF rotating by not expecting a response */
 			      false );
 
-	/* Hand to power/pc-sric board client code */
+	/* Hand to power/pc-sric board client code - unless there's no space
+	 * for any response it might generate to be stored */
+	if( gw_insric_state == IS_FULL ) {
+		hostser_rx_done();
+		return false;
+	}
+
 	ret = sric_conf.rx_cmd( &gw_sric_if );
 
 	/* Discard received frame */
@@ -124,9 +131,9 @@ static bool gw_proc_host_cmd()
 		return false;
 	}
 
-	if( gw_insric_state != IS_IDLE ) {
-		hostser_rx_done();
+	if( gw_insric_state == IS_FULL ) {
 		/* Ignore when we can't transmit a response */
+		hostser_rx_done();
 		return false;
 	}
 
@@ -225,9 +232,23 @@ static void gw_insric_fsm( gw_event_t event )
 			gw_sric_if.txbuf = hostser_txbuf;
 		}
 		break;
+
 	case IS_TRANSMITTING:
-		if( event == EV_HOST_TX_COMPLETE )
+		if( event == EV_HOST_TX_COMPLETE ) {
+			/* Buffer freed */
 			gw_insric_state = IS_IDLE;
+		} else if ( event == EV_SRIC_RX ) {
+			/* Another frame */
+			hostser_tx();
+			gw_insric_state = IS_FULL;
+			gw_sric_if.txbuf = hostser_txbuf;
+		}
+		break;
+
+	case IS_FULL:
+		if ( event == EV_HOST_TX_COMPLETE ) {
+			gw_insric_state = IS_TRANSMITTING;
+		}
 		break;
 	}
 }
@@ -244,6 +265,12 @@ void sric_gw_hostser_tx_done( void )
 
 void sric_gw_sric_promisc_rx( const sric_if_t *iface )
 {
+
+	if( gw_insric_state == IS_FULL ) {
+		/* No space -> don't transmit */
+		return;
+	}
+
 	memcpy( gw_sric_if.txbuf, sric_rxbuf, sric_rxbuf[SRIC_LEN] + SRIC_HEADER_SIZE );
 	gw_insric_fsm( EV_SRIC_RX );
 }
