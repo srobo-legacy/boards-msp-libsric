@@ -30,6 +30,8 @@ typedef enum {
 	EV_SRIC_RX,
 	/* Finished transmitting a frame over SRIC */
 	EV_SRIC_TX_COMPLETE,
+	/* Received frame from local SRIC device (ie, this board) */
+	EV_LOCAL_RX,
 	/* SRIC interface experienced an error */
 	EV_SRIC_ERROR,
 } gw_event_t;
@@ -48,20 +50,61 @@ typedef enum {
 static inhost_state_t gw_inhost_state;
 static insric_state_t gw_insric_state;
 
+static void gw_insric_fsm( gw_event_t event );
+static void gw_inhost_fsm( gw_event_t event );
+static void gw_sric_if_ctl( sric_ctl_t c );
+static void gw_sric_if_use_token( bool b );
+
+static sric_if_t gw_sric_if = {
+	.ctl = gw_sric_if_ctl,
+	.use_token = gw_sric_if_use_token
+};
+
 void sric_gw_init( void )
 {
 }
 
+static void gw_sric_if_ctl ( sric_ctl_t c )
+{
+
+	/* Dummy */
+	return;
+}
+
+static void gw_sric_if_use_token ( bool b )
+{
+
+	/* Dummy */
+	return;
+}
+
+
 static bool gw_fwd_to_sric()
 {
-	/* Transmit frame on SRIC */
-	memcpy( sric_txbuf, hostser_rxbuf, hostser_rxbuf[SRIC_LEN] + SRIC_HEADER_SIZE );
-	hostser_rx_done();
+	int ret;
 
+	/* Retain frame for SRIC transmission */
+	memcpy( sric_txbuf, hostser_rxbuf, hostser_rxbuf[SRIC_LEN] + SRIC_HEADER_SIZE );
+
+	/* Always place msg on SRIC */
 	sric_if.tx_lock();
 	sric_if.tx_cmd_start( hostser_rxbuf[SRIC_LEN] + SRIC_HEADER_SIZE,
-			      /* Avoid SRIC IF rotating by not expecting a response */
+		      /* Avoid SRIC IF rotating by not expecting a response */
 			      false );
+
+	/* Hand to power/pc-sric board client code */
+	gw_sric_if.rxbuf = hostser_rxbuf;
+	gw_sric_if.txbuf = hostser_txbuf;
+	ret = sric_conf.rx_cmd( &gw_sric_if );
+
+	/* Discard received frame */
+	hostser_rx_done();
+
+	if ((ret & SRIC_LENGTH_MASK) <= MAX_PAYLOAD) {
+		/* Hello - gateway device has a response */
+		gw_insric_fsm( EV_LOCAL_RX );
+	}
+
 	return true;
 }
 
@@ -172,6 +215,12 @@ static void gw_insric_fsm( gw_event_t event )
 
 			hostser_tx();
 
+			gw_insric_state = IS_TRANSMITTING;
+		} else if ( event == EV_LOCAL_RX ) {
+			/* Sric device on this board has a frame to send -
+			 * no need to perform copying, should already be in
+			 * hostser_txbuf */
+			hostser_tx();
 			gw_insric_state = IS_TRANSMITTING;
 		}
 		break;
