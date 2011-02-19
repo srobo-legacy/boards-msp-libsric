@@ -52,27 +52,35 @@ static void gw_insric_fsm( gw_event_t event );
 static void gw_inhost_fsm( gw_event_t event );
 static void gw_sric_if_ctl( sric_ctl_t c );
 static void gw_sric_if_use_token( bool b );
+static void gw_sric_if_tx_lock( void );
 
 static sric_if_t gw_sric_if = {
 	.ctl = gw_sric_if_ctl,
-	.use_token = gw_sric_if_use_token
+	.use_token = gw_sric_if_use_token,
+	.tx_lock = gw_sric_if_tx_lock
 };
 
 void sric_gw_init( void )
 {
+
+	gw_sric_if.txbuf = hostser_txbuf;
 }
 
 static void gw_sric_if_ctl ( sric_ctl_t c )
 {
 
-	/* Dummy */
 	return;
 }
 
 static void gw_sric_if_use_token ( bool b )
 {
 
-	/* Dummy */
+	return;
+}
+
+static void gw_sric_if_tx_lock( void )
+{
+
 	return;
 }
 
@@ -82,17 +90,16 @@ static bool gw_fwd_to_sric()
 	int ret;
 
 	/* Retain frame for SRIC transmission */
-	memcpy( sric_txbuf, hostser_rxbuf, hostser_rxbuf[SRIC_LEN] + SRIC_HEADER_SIZE );
+	memcpy( sric_txbuf, gw_sric_if.rxbuf,
+			gw_sric_if.rxbuf[SRIC_LEN] + SRIC_HEADER_SIZE );
 
 	/* Always place msg on SRIC */
 	sric_if.tx_lock();
-	sric_if.tx_cmd_start( hostser_rxbuf[SRIC_LEN] + SRIC_HEADER_SIZE,
+	sric_if.tx_cmd_start( gw_sric_if.rxbuf[SRIC_LEN] + SRIC_HEADER_SIZE,
 		      /* Avoid SRIC IF rotating by not expecting a response */
 			      false );
 
 	/* Hand to power/pc-sric board client code */
-	gw_sric_if.rxbuf = hostser_rxbuf;
-	gw_sric_if.txbuf = hostser_txbuf;
 	ret = sric_conf.rx_cmd( &gw_sric_if );
 
 	/* Discard received frame */
@@ -106,12 +113,12 @@ static bool gw_fwd_to_sric()
 	return true;
 }
 
-#define require_len(x) do { if( hostser_rxbuf[SRIC_LEN] != x ) return false; } while(0)
+#define require_len(x) do { if( gw_sric_if.rxbuf[SRIC_LEN] != x ) return false; } while(0)
 
 static bool gw_proc_host_cmd()
 {
-	uint8_t len = hostser_rxbuf[SRIC_LEN];
-	uint8_t *data = hostser_rxbuf + SRIC_DATA;
+	uint8_t len = gw_sric_if.rxbuf[SRIC_LEN];
+	uint8_t *data = gw_sric_if.rxbuf + SRIC_DATA;
 
 	if( len == 0 ) {
 		hostser_rx_done();
@@ -124,12 +131,12 @@ static bool gw_proc_host_cmd()
 		return false;
 	}
 
-	hostser_txbuf[0] = 0x8e;
-	hostser_txbuf[SRIC_DEST] = 1 | 0x80; /* Destination is bus director */
+	gw_sric_if.txbuf[0] = 0x8e;
+	gw_sric_if.txbuf[SRIC_DEST] = 1 | 0x80; /* Destination is bus director*/
 					/* Additionally, this is an ack */
-	hostser_txbuf[SRIC_SRC] = 0;	/* XXX - what's an appropriate addr
+	gw_sric_if.txbuf[SRIC_SRC] = 0;	/* XXX - what's an appropriate addr
 					 * for the gateway to send msgs from? */
-	hostser_txbuf[SRIC_LEN] = 0;
+	gw_sric_if.txbuf[SRIC_LEN] = 0;
 
 	switch( data[0] )
 	{
@@ -145,8 +152,8 @@ static bool gw_proc_host_cmd()
 
 	case GW_CMD_HAVE_TOKEN:
 		require_len(1);
-		hostser_txbuf[SRIC_LEN] = 1;
-		hostser_txbuf[SRIC_DATA] = sric_conf.token_drv->have_token();
+		gw_sric_if.txbuf[SRIC_LEN] = 1;
+		gw_sric_if.txbuf[SRIC_DATA] = sric_conf.token_drv->have_token();
 		break;
 
 #if SRIC_DIRECTOR
@@ -176,6 +183,8 @@ static bool gw_proc_host_cmd()
 static void gw_inhost_fsm( gw_event_t event )
 {
 	inhost_state_t new = IH_IDLE;
+
+	gw_sric_if.rxbuf = hostser_rxbuf;
 
 	switch( gw_inhost_state ) {
 	case IH_IDLE:
@@ -217,6 +226,9 @@ static void gw_insric_fsm( gw_event_t event )
 
 			hostser_tx();
 			gw_insric_state = IS_TRANSMITTING;
+
+			/* Swap over buffers */
+			gw_sric_if.txbuf = hostser_txbuf;
 		}
 		break;
 	case IS_TRANSMITTING:
