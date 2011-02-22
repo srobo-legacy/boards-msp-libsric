@@ -43,7 +43,6 @@ static volatile bool delay_flag = false;
 
 static bool delay_cb( void *dummy __attribute__((unused)))
 {
-
 	delay_flag = true;
 	return false;
 }

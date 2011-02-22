@@ -125,7 +125,6 @@ static void rx_fsm ( rx_event_t ev );
 
 void sric_init( void )
 {
-
 	sric_addr = 0;
 	lvds_tx_dis();
 	(*sric_conf.txen_dir) |= sric_conf.txen_mask;
@@ -175,7 +174,6 @@ static void register_timeout( void )
 #ifndef DIRECTOR
 static bool reset_timeout( void *ud )
 {
-
 	intr_flags |= INTR_RESET_DONE;
 	return false;
 }
