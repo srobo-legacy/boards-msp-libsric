@@ -39,8 +39,6 @@ static const sric_cmd_t syscmds[] =
 	{ syscmd_addr_info },
 };
 
-static sched_task_t delay_task;
-
 static volatile bool delay_flag = false;
 
 static bool delay_cb( void *dummy __attribute__((unused)))
@@ -50,11 +48,13 @@ static bool delay_cb( void *dummy __attribute__((unused)))
 	return false;
 }
 
+const static sched_task_t delay_task = {
+	.t = 1,
+	.cb = delay_cb,
+};
+
 void insert_enum_delay( void )
 {
-
-	delay_task.t = 1;
-	delay_task.cb = delay_cb;
 	sched_add(&delay_task);
 
 	while (delay_flag == false)
