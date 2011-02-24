@@ -179,14 +179,13 @@ static bool gw_proc_host_cmd()
 /* Manages data coming in from the host */
 static void gw_inhost_fsm( gw_event_t event )
 {
-	inhost_state_t new = IH_IDLE;
-
 	gw_sric_if.rxbuf = hostser_rxbuf;
 
 	if( event == EV_SRIC_TX_COMPLETE ) {
 		gw_inhost_state = IH_IDLE;
 		return;
 	} else if ( event == EV_HOST_RX ) {
+		inhost_state_t new = IH_IDLE;
 		bool (*f)(void) = NULL;
 
 		if( hostser_rxbuf[0] == 0x7e &&
