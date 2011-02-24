@@ -192,7 +192,9 @@ static void proc_queued_reset( void )
 		sched_rem(&timeout_task);
 
 #ifdef DIRECTOR
-		/* If we're the director, request the token immediately */
+		/* If we're the director, request the token immediately.
+		 * Clients will request the token shortly after receiving the
+		 * reset command, and we want to be left holding it. */
 		sric_conf.token_drv->req();
 #else
 		/* Release token if we have it, then in a bit, request it again.
