@@ -102,14 +102,10 @@ static bool gw_fwd_to_sric()
 	/* Hand to power/pc-sric board client code - unless there's no space
 	 * for any response it might generate to be stored */
 	if( gw_insric_state == IS_FULL ) {
-		hostser_rx_done();
 		return false;
 	}
 
 	ret = sric_conf.rx_cmd( &gw_sric_if );
-
-	/* Discard received frame */
-	hostser_rx_done();
 
 	if ((ret & SRIC_LENGTH_MASK) <= MAX_PAYLOAD) {
 		/* Hello - gateway device has a response */
@@ -127,13 +123,10 @@ static bool gw_proc_host_cmd()
 	uint8_t *data = gw_sric_if.rxbuf + SRIC_DATA;
 
 	if( len == 0 ) {
-		hostser_rx_done();
 		return false;
 	}
 
 	if( gw_insric_state == IS_FULL ) {
-		/* Ignore when we can't transmit a response */
-		hostser_rx_done();
 		return false;
 	}
 
@@ -176,8 +169,6 @@ static bool gw_proc_host_cmd()
 #endif
 	}
 
-	hostser_rx_done();
-
 	/* Calling insric FSM from within inhost FSM: should be fine, there are
 	 * no paths from insric FSM to inhost. And being full duplex, the host
 	 * interface state doesn't (shouldn't) share any state */
@@ -192,28 +183,25 @@ static void gw_inhost_fsm( gw_event_t event )
 
 	gw_sric_if.rxbuf = hostser_rxbuf;
 
-	switch( gw_inhost_state ) {
-	case IH_IDLE:
-		if( event == EV_HOST_RX ) {
-			bool (*f)(void) = NULL;
+	if( event == EV_SRIC_TX_COMPLETE ) {
+		gw_inhost_state = IH_IDLE;
+		return;
+	} else if ( event == EV_HOST_RX ) {
+		bool (*f)(void) = NULL;
 
-			if( hostser_rxbuf[0] == 0x7e ) {
-				f = gw_fwd_to_sric;
-				new = IH_TRANSMITTING_SRIC;
-			} else if( hostser_rxbuf[0] == 0x8e ) {
-				f = gw_proc_host_cmd;
-				new = IH_IDLE;
-			}
-
-			if( f != NULL && f() )
-				gw_inhost_state = new;
+		if( hostser_rxbuf[0] == 0x7e &&
+		    gw_inhost_state != IH_TRANSMITTING_SRIC) {
+			f = gw_fwd_to_sric;
+			new = IH_TRANSMITTING_SRIC;
+		} else if( hostser_rxbuf[0] == 0x8e ) {
+			f = gw_proc_host_cmd;
+			new = gw_inhost_state;
 		}
-		break;
 
-	case IH_TRANSMITTING_SRIC:
-		if( event == EV_SRIC_TX_COMPLETE )
-			gw_inhost_state = IH_IDLE;
-		break;
+		if( f != NULL && f() )
+			gw_inhost_state = new;
+
+		hostser_rx_done();
 	}
 }
 
