@@ -50,12 +50,17 @@ static bool get_have_token( void )
 
 static bool emit_delayed(void *ud)
 {
+	void **ud2;
+
 	emit_token();
+	ud2 = ud;
+	*ud2 = NULL;
 	return false;
 }
 
 static sched_task_t emit_timeout = {
 	.cb = emit_delayed,
+	.udata = NULL,
 };
 
 static void token_isr(uint16_t flags)
@@ -72,9 +77,12 @@ static void token_isr(uint16_t flags)
 		have_token = true;
 		requested = false;
 		token_dir_conf.haz_token();
-	} else {
+	} else if (emit_timeout.udata == NULL) {
 		/* Pass it on after a small delay */
 		emit_timeout.t = 2;
+		/* Some random pointer to allow us to see if we've already
+		 * registered this callback */
+		emit_timeout.udata = &emit_timeout.udata;
 		sched_add(&emit_timeout);
 	}
 }
