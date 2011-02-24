@@ -53,6 +53,8 @@ static bool emit_delayed(void *ud)
 	void **ud2;
 
 	emit_token();
+
+	/* Mark timeout as unregistered */
 	ud2 = ud;
 	*ud2 = NULL;
 	return false;
@@ -60,6 +62,7 @@ static bool emit_delayed(void *ud)
 
 static sched_task_t emit_timeout = {
 	.cb = emit_delayed,
+	/* We set this to non-NULL when this timeout is registered */
 	.udata = NULL,
 };
 
@@ -80,8 +83,7 @@ static void token_isr(uint16_t flags)
 	} else if (emit_timeout.udata == NULL) {
 		/* Pass it on after a small delay */
 		emit_timeout.t = 2;
-		/* Some random pointer to allow us to see if we've already
-		 * registered this callback */
+		/* Use udata to determine if we've already registered this callback */
 		emit_timeout.udata = &emit_timeout.udata;
 		sched_add(&emit_timeout);
 	}
