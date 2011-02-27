@@ -16,6 +16,7 @@
 #include "sric-client.h"
 
 #include <drivers/sched.h>
+#include "version-buf.h"
 
 /* Reset the device, move into enumeration mode */
 static uint8_t syscmd_reset( const sric_if_t *iface );
@@ -33,10 +34,14 @@ static uint8_t syscmd_addr_info( const sric_if_t *iface );
    The order of these is important! */
 static const sric_cmd_t syscmds[] =
 {
+	/* Commands required for enumeration */
 	{ syscmd_reset },
 	{ syscmd_enum_tok_advance },
 	{ syscmd_addr_assign },
 	{ syscmd_addr_info },
+
+	/* Git version information */
+	{ version_buf_read },
 };
 
 static volatile bool delay_flag = false;
