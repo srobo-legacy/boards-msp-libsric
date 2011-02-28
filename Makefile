@@ -10,7 +10,7 @@ libsric.a: ${O_FILES}
 
 include depend
 
-depend: *.c
+depend: version-buf-data.c version-buf-data.h *.c
 	rm -f depend
 	for file in $^; do \
 		${CC} ${CFLAGS} -MM $$file -o - >> $@ ; \
