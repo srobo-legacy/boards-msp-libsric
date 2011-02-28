@@ -7,8 +7,9 @@
 #include "token-drv.h"
 
 #define MAX_PAYLOAD 64
+#define MAX_FRAME_LEN MAX_PAYLOAD + 6
 
-#define SRIC_TXBUF_SIZE (6 + MAX_PAYLOAD)
+#define SRIC_TXBUF_SIZE MAX_FRAME_LEN
 #define SRIC_RXBUF_SIZE SRIC_TXBUF_SIZE
 /* The transmit buffer */
 extern uint8_t sric_txbuf[];
