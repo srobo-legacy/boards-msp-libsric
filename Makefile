@@ -23,4 +23,4 @@ version-buf-data.c version-buf-data.h: make-version-buf.py
 
 clean:
 	-rm -f *.o *.a
-	-rm version-buf-data.c version-buf-data.h
+	-rm -f version-buf-data.c version-buf-data.h
