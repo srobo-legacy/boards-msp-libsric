@@ -512,8 +512,10 @@ void sric_rx_cb( uint8_t b )
 
 static void sric_tx_lock( void )
 {
-	while( state != S_TX_LOCKED )
+	while( state != S_TX_LOCKED ) {
 		fsm(EV_TX_LOCK);
+		sric_poll();
+	}
 }
 
 static void sric_tx_start( uint8_t len, bool _expect_resp )
