@@ -258,7 +258,7 @@ void sric_gw_sric_promisc_rx( const sric_if_t *iface )
 		return;
 	}
 
-	memcpy( gw_sric_if.txbuf, iface->rxbuf, sric_rxbuf[SRIC_LEN] + SRIC_HEADER_SIZE );
+	memcpy( gw_sric_if.txbuf, iface->rxbuf, iface->rxbuf[SRIC_LEN] + SRIC_HEADER_SIZE );
 	gw_insric_fsm( EV_SRIC_RX );
 }
 
