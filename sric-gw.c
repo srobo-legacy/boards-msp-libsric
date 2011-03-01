@@ -107,7 +107,7 @@ static bool gw_fwd_to_sric()
 
 	ret = sric_conf.rx_cmd( &gw_sric_if );
 
-	if ((ret & SRIC_LENGTH_MASK) <= MAX_PAYLOAD) {
+	if ((ret & SRIC_LENGTH_MASK) <= (MAX_FRAME_LEN-2)) {
 		/* Hello - gateway device has a response */
 		gw_insric_fsm( EV_SRIC_RX );
 	}

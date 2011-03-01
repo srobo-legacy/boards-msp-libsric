@@ -229,7 +229,7 @@ static void fsm( event_t ev )
 			if( l == SRIC_RESPONSE_DEFER ) {
 				/* Response isn't ready yet.  Wait. */
 				state = S_WAIT_ASM_RESP;
-			} else if( (l & SRIC_LENGTH_MASK) <= MAX_PAYLOAD ) {
+			} else if( (l & SRIC_LENGTH_MASK) <= (MAX_FRAME_LEN-2) ) {
 				crc_txbuf();
 				sric_txlen = l + 2;
 
