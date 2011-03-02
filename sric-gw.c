@@ -56,9 +56,7 @@ static inhost_state_t gw_inhost_state;
 static insric_state_t gw_insric_state;
 static gwdev_state_t gw_dev_state;
 static volatile bool gw_dev_timed_out;
-
-/* What's that you say? MORE BUFFERS? */
-static uint8_t gw_dev_txbuf[70];
+static uint8_t *gw_dev_frame_ptr;
 
 static void gw_insric_fsm( gw_event_t event );
 static void gw_inhost_fsm( gw_event_t event );
@@ -120,21 +118,20 @@ static void gw_sric_if_tx_lock( void )
 static void gw_sric_tx_cmd_start( uint8_t len, bool expect_resp )
 {
 
+	if( gw_insric_state == IS_FULL && !expect_resp ) {
+		/* No space -> no joy */
+		return;
+	}
+
+	gw_dev_frame_ptr = gw_sric_if.txbuf;
+	gw_insric_fsm( EV_SRIC_RX );
+
 	if ( expect_resp ) {
-		/* Stash data for future retransmission */
-		memcpy( gw_dev_txbuf, gw_sric_if.txbuf,
-			gw_sric_if.txbuf[SRIC_LEN] + SRIC_HEADER_SIZE);
 		gw_dev_state = DEV_WAITING;
 		gw_dev_timed_out = false;
 		sched_add( &gw_dev_retransmit );
 	}
 
-	if( gw_insric_state == IS_FULL ) {
-		/* No space -> no joy */
-		return;
-	}
-
-	gw_insric_fsm( EV_SRIC_RX );
 	return;
 }
 
@@ -147,9 +144,10 @@ void sric_gw_poll()
 			return;
 		}
 
-		memcpy( gw_sric_if.txbuf, gw_dev_txbuf,
-				gw_dev_txbuf[SRIC_LEN] + SRIC_HEADER_SIZE );
-		gw_insric_fsm( EV_SRIC_RX );
+		if ( hostser_txbuf != gw_dev_frame_ptr )
+			memcpy( hostser_txbuf, gw_dev_frame_ptr, 70 );
+
+		hostser_tx();
 
 		gw_dev_timed_out = false;
 
@@ -300,6 +298,13 @@ static void gw_inhost_fsm( gw_event_t event )
 /* Manages data coming in from the sric bus */
 static void gw_insric_fsm( gw_event_t event )
 {
+
+	if ( event == EV_SRIC_RX && gw_dev_state == DEV_WAITING)
+		/* Don't accept new frames while we're (possibly)
+		 * retransmitting one from this device */
+		/* This could be heavily improved */
+		return;
+
 	switch( gw_insric_state ) {
 	case IS_IDLE:
 		if( event == EV_SRIC_RX ) {
