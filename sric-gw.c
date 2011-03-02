@@ -162,27 +162,47 @@ static bool gw_fwd_to_sric()
 {
 	int ret;
 
-	/* Retain frame for SRIC transmission */
-	memcpy( sric_txbuf, gw_sric_if.rxbuf,
+	/* Is this destined for the gateway device, the bus, or both? */
+	if ( ( gw_sric_if.rxbuf[SRIC_DEST] & 0x7F ) != sric_addr ||
+				gw_sric_if.rxbuf[SRIC_DEST] == 0 ) {
+
+		/* not for local dev, or broadcast; put on bus. */
+		memcpy( sric_txbuf, gw_sric_if.rxbuf,
 			gw_sric_if.rxbuf[SRIC_LEN] + SRIC_HEADER_SIZE );
 
-	/* Always place msg on SRIC */
-	sric_if.tx_lock();
-	sric_if.tx_cmd_start( gw_sric_if.rxbuf[SRIC_LEN] + SRIC_HEADER_SIZE,
-		      /* Avoid SRIC IF rotating by not expecting a response */
-			      false );
+		sric_if.tx_lock();
 
-	/* Hand to power/pc-sric board client code - unless there's no space
-	 * for any response it might generate to be stored */
-	if( gw_insric_state == IS_FULL ) {
-		return false;
+		/* Avoid SRIC IF rotating by not expecting a response */
+		sric_if.tx_cmd_start(
+			gw_sric_if.rxbuf[SRIC_LEN] + SRIC_HEADER_SIZE, false );
 	}
 
-	ret = sric_conf.rx_cmd( &gw_sric_if );
+	/* If it's for this device: */
+	if ( ( gw_sric_if.rxbuf[SRIC_DEST] & 0x7F ) == sric_addr ||
+				gw_sric_if.rxbuf[SRIC_DEST] == 0 ) {
+		/* An ack? */
+		if ( gw_sric_if.rxbuf[SRIC_DEST] & 0x80 ) {
+			if ( gw_dev_state == DEV_WAITING ) {
+				sched_rem( &gw_dev_retransmit );
+				gw_dev_timed_out = false;
+				gw_dev_state = DEV_IDLE;
+			}
 
-	if ((ret & SRIC_LENGTH_MASK) <= (MAX_FRAME_LEN-2)) {
-		/* Hello - gateway device has a response */
-		gw_insric_fsm( EV_SRIC_RX );
+			/* XXX: passing ack data to local device? */
+		} else {
+
+			/* Normal req. Discard if we can't store a response */
+			if( gw_insric_state == IS_FULL ) {
+				return false;
+			}
+
+			ret = sric_conf.rx_cmd( &gw_sric_if );
+
+			if ((ret & SRIC_LENGTH_MASK) <= (MAX_FRAME_LEN-2)) {
+				/* Hello - gateway device has a response */
+				gw_insric_fsm( EV_SRIC_RX );
+			}
+		}
 	}
 
 	return true;
