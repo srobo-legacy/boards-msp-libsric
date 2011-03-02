@@ -17,6 +17,7 @@ typedef enum {
 } gw_cmd_t;
 
 void sric_gw_init( void );
+void sric_gw_poll( void );
 
 /* Call when frame available on the host side */
 void sric_gw_hostser_rx( void );

@@ -20,6 +20,8 @@
 #include "token-dir.h"
 #endif
 
+#include <drivers/sched.h>
+
 /* Events that can influence the state machine */
 typedef enum {
 	/* Received a frame from the host */
@@ -45,19 +47,37 @@ typedef enum {
 	IS_FULL
 } insric_state_t;
 
+typedef enum {
+	DEV_IDLE,
+	DEV_WAITING
+} gwdev_state_t;
+
 static inhost_state_t gw_inhost_state;
 static insric_state_t gw_insric_state;
+static gwdev_state_t gw_dev_state;
+static volatile bool gw_dev_timed_out;
+
+/* What's that you say? MORE BUFFERS? */
+static uint8_t gw_dev_txbuf[70];
 
 static void gw_insric_fsm( gw_event_t event );
 static void gw_inhost_fsm( gw_event_t event );
 static void gw_sric_if_ctl( sric_ctl_t c );
 static void gw_sric_if_use_token( bool b );
 static void gw_sric_if_tx_lock( void );
+static void gw_sric_tx_cmd_start( uint8_t len, bool expect_resp );
+static bool gw_dev_timeout( void *dummy );
 
 static sric_if_t gw_sric_if = {
 	.ctl = gw_sric_if_ctl,
 	.use_token = gw_sric_if_use_token,
-	.tx_lock = gw_sric_if_tx_lock
+	.tx_lock = gw_sric_if_tx_lock,
+	.tx_cmd_start = gw_sric_tx_cmd_start
+};
+
+const static sched_task_t gw_dev_retransmit = {
+	.t = 10,		/* Suggestions are welcome */
+	.cb = gw_dev_timeout
 };
 
 void sric_gw_init( void )
@@ -78,12 +98,65 @@ static void gw_sric_if_use_token ( bool b )
 	return;
 }
 
+static bool gw_dev_timeout( void *dummy )
+{
+
+	gw_dev_timed_out = true;
+	return false;
+}
+
 static void gw_sric_if_tx_lock( void )
 {
+
+	/* While we have no free buffers or we're busy retransmitting, spin */
+	while ( gw_dev_state == DEV_WAITING || gw_insric_state == IS_FULL ) {
+		hostser_poll();		/* For us to free a buffer */
+		sric_gw_poll();		/* Permit retransmission */
+	}
 
 	return;
 }
 
+static void gw_sric_tx_cmd_start( uint8_t len, bool expect_resp )
+{
+
+	if ( expect_resp ) {
+		/* Stash data for future retransmission */
+		memcpy( gw_dev_txbuf, gw_sric_if.txbuf,
+			gw_sric_if.txbuf[SRIC_LEN] + SRIC_HEADER_SIZE);
+		gw_dev_state = DEV_WAITING;
+		gw_dev_timed_out = false;
+		sched_add( &gw_dev_retransmit );
+	}
+
+	if( gw_insric_state == IS_FULL ) {
+		/* No space -> no joy */
+		return;
+	}
+
+	gw_insric_fsm( EV_SRIC_RX );
+	return;
+}
+
+void sric_gw_poll()
+{
+
+	if ( gw_dev_timed_out ) {
+		if ( gw_insric_state == IS_FULL ) {
+			/* Can't retransmitt */
+			return;
+		}
+
+		memcpy( gw_sric_if.txbuf, gw_dev_txbuf,
+				gw_dev_txbuf[SRIC_LEN] + SRIC_HEADER_SIZE );
+		gw_insric_fsm( EV_SRIC_RX );
+
+		gw_dev_timed_out = false;
+
+		sched_rem( &gw_dev_retransmit );
+		sched_add( &gw_dev_retransmit );
+	}
+}
 
 static bool gw_fwd_to_sric()
 {
