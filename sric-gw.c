@@ -157,7 +157,7 @@ void sric_gw_poll()
 	}
 }
 
-static bool gw_fwd_to_sric()
+static bool gw_proc_bus_cmd()
 {
 	int ret;
 
@@ -285,12 +285,12 @@ static void gw_inhost_fsm( gw_event_t event )
 
 		if( hostser_rxbuf[0] == 0x7e &&
 		    gw_inhost_state != IH_TRANSMITTING_SRIC) {
-			f = gw_fwd_to_sric;
+			f = gw_proc_bus_cmd;
 		} else if( hostser_rxbuf[0] == 0x8e ) {
 			f = gw_proc_host_cmd;
 		}
 
-		/* NOTE: gw_fwd_to_sric may change gw_inhost_state to
+		/* NOTE: gw_proc_bus_cmd may change gw_inhost_state to
 		 * IH_TRANSMITTING_SRIC, depending on whether it actually puts
 		 * this frame on SRIC */
 		if( f != NULL)
