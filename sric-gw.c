@@ -66,7 +66,7 @@ static void gw_sric_if_tx_lock( void );
 static void gw_sric_tx_cmd_start( uint8_t len, bool expect_resp );
 static bool gw_dev_timeout( void *dummy );
 
-static sric_if_t gw_sric_if = {
+sric_if_t gw_sric_if = {
 	.ctl = gw_sric_if_ctl,
 	.use_token = gw_sric_if_use_token,
 	.tx_lock = gw_sric_if_tx_lock,

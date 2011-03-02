@@ -16,6 +16,9 @@ typedef enum {
 	GW_CMD_GEN_TOKEN,
 } gw_cmd_t;
 
+/* Sric interface for the gateway device */
+extern sric_if_t gw_sric_if;
+
 void sric_gw_init( void );
 void sric_gw_poll( void );
 
