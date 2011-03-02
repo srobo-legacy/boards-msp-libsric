@@ -110,6 +110,7 @@ static void gw_sric_if_tx_lock( void )
 	while ( gw_dev_state == DEV_WAITING || gw_insric_state == IS_FULL ) {
 		hostser_poll();		/* For us to free a buffer */
 		sric_gw_poll();		/* Permit retransmission */
+		sric_poll();		/* Allow rest of sric to operate :| */
 	}
 
 	return;
@@ -173,6 +174,10 @@ static bool gw_fwd_to_sric()
 		/* Avoid SRIC IF rotating by not expecting a response */
 		sric_if.tx_cmd_start(
 			gw_sric_if.rxbuf[SRIC_LEN] + SRIC_HEADER_SIZE, false );
+
+		/* Update state to reflect the fact we just put something on
+		 * the bus */
+		gw_inhost_state = IH_TRANSMITTING_SRIC;
 	}
 
 	/* If it's for this device: */
@@ -276,20 +281,20 @@ static void gw_inhost_fsm( gw_event_t event )
 		gw_inhost_state = IH_IDLE;
 		return;
 	} else if ( event == EV_HOST_RX ) {
-		inhost_state_t new = IH_IDLE;
 		bool (*f)(void) = NULL;
 
 		if( hostser_rxbuf[0] == 0x7e &&
 		    gw_inhost_state != IH_TRANSMITTING_SRIC) {
 			f = gw_fwd_to_sric;
-			new = IH_TRANSMITTING_SRIC;
 		} else if( hostser_rxbuf[0] == 0x8e ) {
 			f = gw_proc_host_cmd;
-			new = gw_inhost_state;
 		}
 
-		if( f != NULL && f() )
-			gw_inhost_state = new;
+		/* NOTE: gw_fwd_to_sric may change gw_inhost_state to
+		 * IH_TRANSMITTING_SRIC, depending on whether it actually puts
+		 * this frame on SRIC */
+		if( f != NULL)
+			f();
 
 		hostser_rx_done();
 	}
