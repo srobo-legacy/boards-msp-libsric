@@ -165,8 +165,9 @@ static bool gw_proc_bus_cmd()
 	int ret;
 
 	/* Is this destined for the gateway device, the bus, or both? */
-	if ( ( gw_sric_if.rxbuf[SRIC_DEST] & 0x7F ) != sric_addr ||
-				gw_sric_if.rxbuf[SRIC_DEST] == 0 ) {
+	if ((( gw_sric_if.rxbuf[SRIC_DEST] & 0x7F ) != sric_addr ||
+				gw_sric_if.rxbuf[SRIC_DEST] == 0) &&
+				gw_inhost_state != IH_TRANSMITTING_SRIC) {
 
 		/* not for local dev, or broadcast; put on bus. */
 		memcpy( sric_txbuf, gw_sric_if.rxbuf,
@@ -286,8 +287,7 @@ static void gw_inhost_fsm( gw_event_t event )
 	} else if ( event == EV_HOST_RX ) {
 		bool (*f)(void) = NULL;
 
-		if( hostser_rxbuf[0] == 0x7e &&
-		    gw_inhost_state != IH_TRANSMITTING_SRIC) {
+		if( hostser_rxbuf[0] == 0x7e) {
 			f = gw_proc_bus_cmd;
 		} else if( hostser_rxbuf[0] == 0x8e ) {
 			f = gw_proc_host_cmd;
