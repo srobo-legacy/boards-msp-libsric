@@ -5,8 +5,18 @@
 #include <drivers/pinint.h>
 #include <drivers/sched.h>
 
+static bool token_regen_cb( void *ud );
+
 static bool have_token;
 static bool requested;
+static uint16_t last_tok_time;
+
+const sched_task_t token_regen =
+{
+	.t = 250,	/* Suggestions welcome */
+	.cb = token_regen_cb,
+	.udata = NULL
+};
 
 #define to_low() do { (*token_dir_conf.to_port) &= ~token_dir_conf.to_mask; } while (0)
 #define to_high() do { (*token_dir_conf.to_port) |= token_dir_conf.to_mask; } while (0)
@@ -32,6 +42,10 @@ static void release( void )
 {
 	requested = false;
 
+	last_tok_time = sched_time;
+	sched_rem(&token_regen);
+	sched_add(&token_regen);
+
 	if(have_token) {
 		have_token = false;
 		emit_token();
@@ -46,6 +60,15 @@ static void cancel_req( void )
 static bool get_have_token( void )
 {
 	return have_token;
+}
+
+static bool token_regen_cb( void *ud )
+{
+
+	if (sched_time_since(last_tok_time) > 250)
+		emit_token();
+
+	return true;
 }
 
 static bool emit_delayed(void *ud)
@@ -68,6 +91,9 @@ static sched_task_t emit_timeout = {
 
 static void token_isr(uint16_t flags)
 {
+
+	last_tok_time = sched_time;
+
 	if( have_token )
 		/* So, this occuring shows there are duplicate tokens on the
 		 * bus. This sucks, and could have caused data corruption.
