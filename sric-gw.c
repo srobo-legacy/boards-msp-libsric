@@ -108,6 +108,9 @@ static void gw_sric_if_tx_lock( void )
 
 	/* While we have no free buffers or we're busy retransmitting, spin */
 	while ( gw_dev_state == DEV_WAITING || gw_insric_state == IS_FULL ) {
+		/* If the WDT is in use we need to reset it here */
+		if ((WDTCTL & WDTHOLD) == 0)
+			WDTCTL = WDTPW | WDTCNTCL; /* If the WDT is in use we need to reset it here */
 		hostser_poll();		/* For us to free a buffer */
 		sric_gw_poll();		/* Permit retransmission */
 		sric_poll();		/* Allow rest of sric to operate :| */
