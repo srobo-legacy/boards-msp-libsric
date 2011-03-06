@@ -513,6 +513,10 @@ void sric_rx_cb( uint8_t b )
 static void sric_tx_lock( void )
 {
 	while( state != S_TX_LOCKED ) {
+		/* If the WDT is in use we need to reset it here */
+		if ((WDTCTL & WDTHOLD) == 0)
+			WDTCTL = WDTPW | WDTCNTCL;
+
 		fsm(EV_TX_LOCK);
 		sric_poll();
 	}
