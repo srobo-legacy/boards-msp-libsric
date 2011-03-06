@@ -56,7 +56,8 @@ static inhost_state_t gw_inhost_state;
 static insric_state_t gw_insric_state;
 static gwdev_state_t gw_dev_state;
 static volatile bool gw_dev_timed_out;
-static uint8_t *gw_dev_frame_ptr;
+
+static uint8_t gw_retxmit_buf[12];
 
 static void gw_insric_fsm( gw_event_t event );
 static void gw_inhost_fsm( gw_event_t event );
@@ -127,7 +128,7 @@ static void gw_sric_tx_cmd_start( uint8_t len, bool expect_resp )
 		return;
 	}
 
-	gw_dev_frame_ptr = gw_sric_if.txbuf;
+	memcpy(gw_retxmit_buf, gw_sric_if.txbuf, 12);
 	gw_insric_fsm( EV_SRIC_RX );
 
 	if ( expect_resp ) {
@@ -142,16 +143,15 @@ static void gw_sric_tx_cmd_start( uint8_t len, bool expect_resp )
 void sric_gw_poll()
 {
 
-	if ( gw_dev_timed_out ) {
+	if ( gw_dev_state == DEV_WAITING && gw_dev_timed_out ) {
 		if ( gw_insric_state == IS_FULL ) {
 			/* Can't retransmitt */
 			return;
 		}
 
-		if ( hostser_txbuf != gw_dev_frame_ptr )
-			memcpy( hostser_txbuf, gw_dev_frame_ptr, 70 );
-
-		hostser_tx();
+		/* Given gw_insric_state has a buffer free, we can queue */
+		memcpy(gw_sric_if.txbuf, gw_retxmit_buf, 12);
+		gw_insric_fsm( EV_SRIC_RX );
 
 		gw_dev_timed_out = false;
 
@@ -306,12 +306,6 @@ static void gw_inhost_fsm( gw_event_t event )
 /* Manages data coming in from the sric bus */
 static void gw_insric_fsm( gw_event_t event )
 {
-
-	if ( event == EV_SRIC_RX && gw_dev_state == DEV_WAITING)
-		/* Don't accept new frames while we're (possibly)
-		 * retransmitting one from this device */
-		/* This could be heavily improved */
-		return;
 
 	switch( gw_insric_state ) {
 	case IS_IDLE:
